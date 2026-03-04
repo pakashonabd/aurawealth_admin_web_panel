@@ -1,11 +1,11 @@
 import 'package:flutter/material.dart';
 import '../../core/constants/app_colors.dart';
 
-class ErrorWidget extends StatelessWidget {
+class CustomErrorWidget extends StatelessWidget {
   final String message;
   final VoidCallback? onRetry;
 
-  const ErrorWidget({
+  const CustomErrorWidget({
     Key? key,
     required this.message,
     this.onRetry,

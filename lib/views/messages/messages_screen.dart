@@ -28,7 +28,7 @@ class MessagesScreen extends StatelessWidget {
         }
 
         if (controller.errorMessage.value.isNotEmpty && controller.messageThreads.isEmpty) {
-          return custom_error.ErrorWidget(
+          return custom_error.CustomErrorWidget(
             message: controller.errorMessage.value,
             onRetry: controller.refresh,
           );
