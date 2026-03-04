@@ -4,6 +4,8 @@ class AppConstants {
   static const String appVersion = '1.0.0';
   
   // API Configuration
+  // TODO: Update this with your actual API URL before running the app
+  // Example: 'https://api.aurawealth.com' or 'http://localhost:8000'
   static const String baseUrl = 'https://api.aurawealth.com'; // Update with actual URL
   static const int apiTimeout = 30; // seconds
   

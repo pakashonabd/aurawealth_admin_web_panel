@@ -31,6 +31,11 @@ class SidebarMenu extends StatelessWidget {
       route: AppRoutes.transactions,
     ),
     MenuItem(
+      title: 'Users',
+      icon: Icons.people_outline,
+      route: AppRoutes.users,
+    ),
+    MenuItem(
       title: 'Gold Management',
       icon: Icons.trending_up_outlined,
       route: AppRoutes.goldManagement,
