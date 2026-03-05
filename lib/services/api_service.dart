@@ -130,13 +130,15 @@ class ApiService {
     return _handleResponse(response);
   }
 
-  // Mark Transaction as Paid
-  Future<Map<String, dynamic>> markAsPaid(String txId) async {
-    final url = Uri.parse('${AppConstants.baseUrl}${ApiEndpoints.adminMarkAsPaid(txId)}');
-    
+  // Approve Transaction
+  Future<Map<String, dynamic>> approveTransaction(String txId, {String? note}) async {
+    final url = Uri.parse('${AppConstants.baseUrl}${ApiEndpoints.adminApprove(txId)}');
+    final body = note != null ? json.encode({'note': note}) : json.encode({});
+
     final response = await http.post(
       url,
       headers: _getHeaders(),
+      body: body,
     ).timeout(Duration(seconds: AppConstants.apiTimeout));
 
     return _handleResponse(response);
@@ -145,9 +147,23 @@ class ApiService {
   // Reject Transaction
   Future<Map<String, dynamic>> rejectTransaction(String txId, {String? note}) async {
     final url = Uri.parse('${AppConstants.baseUrl}${ApiEndpoints.adminReject(txId)}');
-    final body = note != null ? json.encode({'note': note}) : '';
-    
+    final body = note != null ? json.encode({'note': note}) : json.encode({});
+
     final response = await http.post(
+      url,
+      headers: _getHeaders(),
+      body: body,
+    ).timeout(Duration(seconds: AppConstants.apiTimeout));
+
+    return _handleResponse(response);
+  }
+
+  // Update Paid Status (mark as paid or unpaid)
+  Future<Map<String, dynamic>> updatePaidStatus(String txId, bool isPaid) async {
+    final url = Uri.parse('${AppConstants.baseUrl}${ApiEndpoints.adminPaidStatus(txId)}');
+    final body = json.encode({'is_paid': isPaid});
+
+    final response = await http.put(
       url,
       headers: _getHeaders(),
       body: body,

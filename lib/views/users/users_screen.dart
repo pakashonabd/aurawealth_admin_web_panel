@@ -5,7 +5,6 @@ import '../../core/constants/app_colors.dart';
 import '../../core/constants/app_constants.dart';
 import '../../core/utils/responsive.dart';
 import '../../core/utils/formatters.dart';
-import '../../widgets/layout/main_layout.dart';
 import '../../widgets/common/loading_widget.dart';
 import '../../widgets/common/error_widget.dart' as custom_error;
 import '../../widgets/common/empty_state_widget.dart';
@@ -18,71 +17,68 @@ class UsersScreen extends StatelessWidget {
   Widget build(BuildContext context) {
     final controller = Get.put(UserController());
 
-    return MainLayout(
-      title: 'Users',
-      child: Obx(() {
-        if (controller.isLoading.value) {
-          return LoadingWidget(message: 'Loading users...');
-        }
+    return Obx(() {
+      if (controller.isLoading.value) {
+        return LoadingWidget(message: 'Loading users...');
+      }
 
-        if (controller.errorMessage.value.isNotEmpty) {
-          return custom_error.CustomErrorWidget(
-            message: controller.errorMessage.value,
-            onRetry: controller.refresh,
-          );
-        }
-
-        return Column(
-          children: [
-            // Search Bar
-            Container(
-              padding: EdgeInsets.all(AppConstants.defaultPadding),
-              decoration: BoxDecoration(
-                color: AppColors.background,
-                border: Border(
-                  bottom: BorderSide(color: AppColors.grey200, width: 1),
-                ),
-              ),
-              child: Row(
-                children: [
-                  Expanded(
-                    child: TextField(
-                      decoration: InputDecoration(
-                        hintText: 'Search users...',
-                        prefixIcon: Icon(Icons.search),
-                        suffixIcon: Obx(() => controller.searchQuery.value.isNotEmpty
-                            ? IconButton(
-                                icon: Icon(Icons.clear),
-                                onPressed: () => controller.setSearchQuery(''),
-                              )
-                            : SizedBox.shrink()),
-                      ),
-                      onChanged: controller.setSearchQuery,
-                    ),
-                  ),
-                  SizedBox(width: 12),
-                  IconButton(
-                    icon: Icon(Icons.refresh),
-                    onPressed: controller.refresh,
-                    tooltip: 'Refresh',
-                  ),
-                ],
-              ),
-            ),
-
-            // Users List
-            Expanded(
-              child: controller.filteredUsers.isEmpty
-                  ? EmptyStateWidget(
-                      message: 'No users found',
-                      icon: Icons.people_outline,
-                    )
-                  : _buildUsersList(context, controller),
-            ),
-          ],
+      if (controller.errorMessage.value.isNotEmpty) {
+        return custom_error.CustomErrorWidget(
+          message: controller.errorMessage.value,
+          onRetry: controller.refresh,
         );
-      }),
-    );
+      }
+
+      return Column(
+        children: [
+          // Search Bar
+          Container(
+            padding: EdgeInsets.all(AppConstants.defaultPadding),
+            decoration: BoxDecoration(
+              color: AppColors.background,
+              border: Border(
+                bottom: BorderSide(color: AppColors.grey200, width: 1),
+              ),
+            ),
+            child: Row(
+              children: [
+                Expanded(
+                  child: TextField(
+                    decoration: InputDecoration(
+                      hintText: 'Search users...',
+                      prefixIcon: Icon(Icons.search),
+                      suffixIcon: Obx(() => controller.searchQuery.value.isNotEmpty
+                          ? IconButton(
+                              icon: Icon(Icons.clear),
+                              onPressed: () => controller.setSearchQuery(''),
+                            )
+                          : SizedBox.shrink()),
+                    ),
+                    onChanged: controller.setSearchQuery,
+                  ),
+                ),
+                SizedBox(width: 12),
+                IconButton(
+                  icon: Icon(Icons.refresh),
+                  onPressed: controller.refresh,
+                  tooltip: 'Refresh',
+                ),
+              ],
+            ),
+          ),
+
+          // Users List
+          Expanded(
+            child: controller.filteredUsers.isEmpty
+                ? EmptyStateWidget(
+                    message: 'No users found',
+                    icon: Icons.people_outline,
+                  )
+                : _buildUsersList(context, controller),
+          ),
+        ],
+      );
+    });
   }
 
   Widget _buildUsersList(BuildContext context, UserController controller) {

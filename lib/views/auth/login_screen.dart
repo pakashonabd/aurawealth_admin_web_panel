@@ -75,7 +75,7 @@ class LoginScreen extends StatelessWidget {
                       SizedBox(height: 16),
 
                       // Password Field
-                      Obx(() => TextFormField(
+                      TextFormField(
                         controller: _passwordController,
                         obscureText: true,
                         decoration: InputDecoration(
@@ -100,12 +100,13 @@ class LoginScreen extends StatelessWidget {
                             );
                           }
                         },
-                      )),
+                      ),
                       SizedBox(height: 24),
 
                       // Error Message
                       Obx(() {
-                        if (authController.errorMessage.value.isNotEmpty) {
+                        final errorMsg = authController.errorMessage.value;
+                        if (errorMsg.isNotEmpty) {
                           return Container(
                             padding: EdgeInsets.all(12),
                             margin: EdgeInsets.only(bottom: 16),
@@ -121,7 +122,7 @@ class LoginScreen extends StatelessWidget {
                                 SizedBox(width: 8),
                                 Expanded(
                                   child: Text(
-                                    authController.errorMessage.value,
+                                    errorMsg,
                                     style: TextStyle(color: AppColors.error),
                                   ),
                                 ),
@@ -133,30 +134,33 @@ class LoginScreen extends StatelessWidget {
                       }),
 
                       // Login Button
-                      Obx(() => ElevatedButton(
-                        onPressed: authController.isLoading.value
-                            ? null
-                            : () {
-                                if (_formKey.currentState?.validate() ?? false) {
-                                  authController.login(
-                                    _emailController.text.trim(),
-                                    _passwordController.text,
-                                  );
-                                }
-                              },
-                        child: authController.isLoading.value
-                            ? SizedBox(
-                                height: 20,
-                                width: 20,
-                                child: CircularProgressIndicator(
-                                  strokeWidth: 2,
-                                  valueColor: AlwaysStoppedAnimation<Color>(
-                                    Colors.white,
+                      Obx(() {
+                        final isLoading = authController.isLoading.value;
+                        return ElevatedButton(
+                          onPressed: isLoading
+                              ? null
+                              : () {
+                                  if (_formKey.currentState?.validate() ?? false) {
+                                    authController.login(
+                                      _emailController.text.trim(),
+                                      _passwordController.text,
+                                    );
+                                  }
+                                },
+                          child: isLoading
+                              ? SizedBox(
+                                  height: 20,
+                                  width: 20,
+                                  child: CircularProgressIndicator(
+                                    strokeWidth: 2,
+                                    valueColor: AlwaysStoppedAnimation<Color>(
+                                      Colors.white,
+                                    ),
                                   ),
-                                ),
-                              )
-                            : Text('Sign In'),
-                      )),
+                                )
+                              : Text('Sign In'),
+                        );
+                      }),
                       SizedBox(height: 16),
 
                       // Version

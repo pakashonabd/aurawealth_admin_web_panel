@@ -5,7 +5,6 @@ import '../../core/constants/app_colors.dart';
 import '../../core/constants/app_constants.dart';
 import '../../core/utils/responsive.dart';
 import '../../core/utils/formatters.dart';
-import '../../widgets/layout/main_layout.dart';
 import '../../widgets/common/loading_widget.dart';
 import '../../widgets/common/error_widget.dart' as custom_error;
 import '../../widgets/common/empty_state_widget.dart';
@@ -20,54 +19,51 @@ class MessagesScreen extends StatelessWidget {
     final controller = Get.find<MessageController>();
     final isMobile = Responsive.isMobile(context);
 
-    return MainLayout(
-      title: 'Messages',
-      child: Obx(() {
-        if (controller.isLoading.value && controller.messageThreads.isEmpty) {
-          return LoadingWidget(message: 'Loading messages...');
-        }
+    return Obx(() {
+      if (controller.isLoading.value && controller.messageThreads.isEmpty) {
+        return LoadingWidget(message: 'Loading messages...');
+      }
 
-        if (controller.errorMessage.value.isNotEmpty && controller.messageThreads.isEmpty) {
-          return custom_error.CustomErrorWidget(
-            message: controller.errorMessage.value,
-            onRetry: controller.refresh,
-          );
-        }
-
-        if (isMobile) {
-          // Mobile: Show either thread list or conversation
-          return controller.selectedUserId.value.isEmpty
-              ? _buildThreadsList(context, controller)
-              : _buildConversation(context, controller);
-        }
-
-        // Desktop/Tablet: Split view
-        return Row(
-          children: [
-            // Thread List
-            Container(
-              width: 350,
-              decoration: BoxDecoration(
-                border: Border(
-                  right: BorderSide(color: AppColors.grey200, width: 1),
-                ),
-              ),
-              child: _buildThreadsList(context, controller),
-            ),
-
-            // Conversation
-            Expanded(
-              child: controller.selectedUserId.value.isEmpty
-                  ? EmptyStateWidget(
-                      message: 'Select a conversation',
-                      icon: Icons.message_outlined,
-                    )
-                  : _buildConversation(context, controller),
-            ),
-          ],
+      if (controller.errorMessage.value.isNotEmpty && controller.messageThreads.isEmpty) {
+        return custom_error.CustomErrorWidget(
+          message: controller.errorMessage.value,
+          onRetry: controller.refresh,
         );
-      }),
-    );
+      }
+
+      if (isMobile) {
+        // Mobile: Show either thread list or conversation
+        return controller.selectedUserId.value.isEmpty
+            ? _buildThreadsList(context, controller)
+            : _buildConversation(context, controller);
+      }
+
+      // Desktop/Tablet: Split view
+      return Row(
+        children: [
+          // Thread List
+          Container(
+            width: 350,
+            decoration: BoxDecoration(
+              border: Border(
+                right: BorderSide(color: AppColors.grey200, width: 1),
+              ),
+            ),
+            child: _buildThreadsList(context, controller),
+          ),
+
+          // Conversation
+          Expanded(
+            child: controller.selectedUserId.value.isEmpty
+                ? EmptyStateWidget(
+                    message: 'Select a conversation',
+                    icon: Icons.message_outlined,
+                  )
+                : _buildConversation(context, controller),
+          ),
+        ],
+      );
+    });
   }
 
   Widget _buildThreadsList(BuildContext context, MessageController controller) {

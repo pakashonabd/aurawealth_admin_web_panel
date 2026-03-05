@@ -6,7 +6,7 @@ class AppConstants {
   // API Configuration
   // TODO: Update this with your actual API URL before running the app
   // Example: 'https://api.aurawealth.com' or 'http://localhost:8000'
-  static const String baseUrl = 'https://api.aurawealth.com'; // Update with actual URL
+  static const String baseUrl = 'https://aurawelath-fast-api-backend-576ef7ef3e27.herokuapp.com'; // Update with actual URL
   static const int apiTimeout = 30; // seconds
   
   // Storage Keys

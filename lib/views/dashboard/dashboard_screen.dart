@@ -5,7 +5,6 @@ import '../../core/constants/app_colors.dart';
 import '../../core/constants/app_constants.dart';
 import '../../core/utils/responsive.dart';
 import '../../core/utils/formatters.dart';
-import '../../widgets/layout/main_layout.dart';
 import '../../widgets/common/stats_card.dart';
 import '../../widgets/common/loading_widget.dart';
 import '../../widgets/common/error_widget.dart' as custom_error;
@@ -18,43 +17,40 @@ class DashboardScreen extends StatelessWidget {
   Widget build(BuildContext context) {
     final controller = Get.find<DashboardController>();
 
-    return MainLayout(
-      title: 'Dashboard',
-      child: Obx(() {
-        if (controller.isLoading.value) {
-          return LoadingWidget(message: 'Loading dashboard...');
-        }
+    return Obx(() {
+      if (controller.isLoading.value) {
+        return LoadingWidget(message: 'Loading dashboard...');
+      }
 
-        if (controller.errorMessage.value.isNotEmpty) {
-          return custom_error.CustomErrorWidget(
-            message: controller.errorMessage.value,
-            onRetry: controller.refresh,
-          );
-        }
-
-        return RefreshIndicator(
-          onRefresh: () async => controller.refresh(),
-          child: SingleChildScrollView(
-            padding: EdgeInsets.all(AppConstants.defaultPadding),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                // Stats Grid
-                _buildStatsGrid(context, controller),
-                SizedBox(height: 24),
-
-                // Pending Transactions
-                _buildPendingTransactions(context, controller),
-                SizedBox(height: 24),
-
-                // Recent Transactions
-                _buildRecentTransactions(context, controller),
-              ],
-            ),
-          ),
+      if (controller.errorMessage.value.isNotEmpty) {
+        return custom_error.CustomErrorWidget(
+          message: controller.errorMessage.value,
+          onRetry: controller.refresh,
         );
-      }),
-    );
+      }
+
+      return RefreshIndicator(
+        onRefresh: () async => controller.refresh(),
+        child: SingleChildScrollView(
+          padding: EdgeInsets.all(AppConstants.defaultPadding),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              // Stats Grid
+              _buildStatsGrid(context, controller),
+              SizedBox(height: 24),
+
+              // Pending Transactions
+              _buildPendingTransactions(context, controller),
+              SizedBox(height: 24),
+
+              // Recent Transactions
+              _buildRecentTransactions(context, controller),
+            ],
+          ),
+        ),
+      );
+    });
   }
 
   Widget _buildStatsGrid(BuildContext context, DashboardController controller) {
@@ -127,6 +123,10 @@ class DashboardScreen extends StatelessWidget {
   Widget _buildPendingTransactions(
       BuildContext context, DashboardController controller) {
     return Card(
+      elevation: 2,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(16),
+      ),
       child: Padding(
         padding: EdgeInsets.all(AppConstants.defaultPadding),
         child: Column(
@@ -134,23 +134,44 @@ class DashboardScreen extends StatelessWidget {
           children: [
             Row(
               children: [
-                Icon(Icons.pending_actions, color: AppColors.warning),
-                SizedBox(width: 8),
+                Container(
+                  padding: EdgeInsets.all(10),
+                  decoration: BoxDecoration(
+                    color: AppColors.warning.withValues(alpha: 0.12),
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  child: Icon(
+                    Icons.pending_actions,
+                    color: AppColors.warning,
+                    size: 22,
+                  ),
+                ),
+                SizedBox(width: 12),
                 Text(
                   'Pending Transactions',
-                  style: Theme.of(context).textTheme.headlineSmall,
+                  style: Theme.of(context).textTheme.headlineSmall?.copyWith(
+                    fontWeight: FontWeight.bold,
+                  ),
                 ),
                 Spacer(),
-                Text(
-                  '${controller.pendingTransactions.length} items',
-                  style: TextStyle(
-                    color: AppColors.grey600,
-                    fontSize: 14,
+                Container(
+                  padding: EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                  decoration: BoxDecoration(
+                    color: AppColors.warning.withValues(alpha: 0.12),
+                    borderRadius: BorderRadius.circular(20),
+                  ),
+                  child: Text(
+                    '${controller.pendingTransactions.length}',
+                    style: TextStyle(
+                      color: AppColors.warning,
+                      fontSize: 14,
+                      fontWeight: FontWeight.bold,
+                    ),
                   ),
                 ),
               ],
             ),
-            SizedBox(height: 16),
+            SizedBox(height: 20),
             _buildTransactionsList(controller.pendingTransactions),
           ],
         ),
@@ -161,6 +182,10 @@ class DashboardScreen extends StatelessWidget {
   Widget _buildRecentTransactions(
       BuildContext context, DashboardController controller) {
     return Card(
+      elevation: 2,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(16),
+      ),
       child: Padding(
         padding: EdgeInsets.all(AppConstants.defaultPadding),
         child: Column(
@@ -168,17 +193,33 @@ class DashboardScreen extends StatelessWidget {
           children: [
             Row(
               children: [
-                Icon(Icons.history, color: AppColors.primary),
-                SizedBox(width: 8),
+                Container(
+                  padding: EdgeInsets.all(10),
+                  decoration: BoxDecoration(
+                    color: AppColors.primary.withValues(alpha: 0.12),
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  child: Icon(
+                    Icons.history,
+                    color: AppColors.primary,
+                    size: 22,
+                  ),
+                ),
+                SizedBox(width: 12),
                 Text(
                   'Recent Transactions',
-                  style: Theme.of(context).textTheme.headlineSmall,
+                  style: Theme.of(context).textTheme.headlineSmall?.copyWith(
+                    fontWeight: FontWeight.bold,
+                  ),
                 ),
                 Spacer(),
                 TextButton.icon(
                   onPressed: () => Get.toNamed('/transactions'),
                   icon: Icon(Icons.arrow_forward, size: 16),
                   label: Text('View All'),
+                  style: TextButton.styleFrom(
+                    foregroundColor: AppColors.primary,
+                  ),
                 ),
               ],
             ),
@@ -251,7 +292,7 @@ class DashboardScreen extends StatelessWidget {
       margin: EdgeInsets.only(bottom: 8),
       child: ListTile(
         leading: CircleAvatar(
-          backgroundColor: _getTypeColor(tx.type).withOpacity(0.1),
+          backgroundColor: _getTypeColor(tx.type).withValues(alpha: 0.1),
           child: Icon(_getTypeIcon(tx.type), color: _getTypeColor(tx.type)),
         ),
         title: Text(Formatters.formatTransactionType(tx.type)),
@@ -277,55 +318,81 @@ class DashboardScreen extends StatelessWidget {
 
   Widget _buildStatusChip(String status) {
     Color color;
-    switch (status.toUpperCase()) {
+    IconData icon;
+    final statusUpper = status.toUpperCase();
+
+    switch (statusUpper) {
       case 'PENDING':
         color = AppColors.statusPending;
+        icon = Icons.pending;
         break;
       case 'APPROVED':
         color = AppColors.statusApproved;
+        icon = Icons.check_circle;
         break;
       case 'PAID':
         color = AppColors.statusPaid;
+        icon = Icons.payment;
         break;
       case 'REJECTED':
         color = AppColors.statusRejected;
+        icon = Icons.cancel;
         break;
       default:
         color = AppColors.grey600;
+        icon = Icons.help;
     }
 
     return Container(
-      padding: EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+      padding: EdgeInsets.symmetric(horizontal: 10, vertical: 6),
       decoration: BoxDecoration(
-        color: color.withOpacity(0.1),
-        borderRadius: BorderRadius.circular(4),
-        border: Border.all(color: color),
+        color: color.withValues(alpha: 0.1),
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: color.withValues(alpha: 0.3)),
       ),
-      child: Text(
-        status.toUpperCase(),
-        style: TextStyle(
-          color: color,
-          fontSize: 11,
-          fontWeight: FontWeight.w600,
-        ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(icon, size: 14, color: color),
+          SizedBox(width: 4),
+          Text(
+            statusUpper,
+            style: TextStyle(
+              color: color,
+              fontSize: 11,
+              fontWeight: FontWeight.w600,
+              letterSpacing: 0.5,
+            ),
+          ),
+        ],
       ),
     );
   }
 
   Widget _buildTypeChip(String type) {
+    final color = _getTypeColor(type);
+    final icon = _getTypeIcon(type);
+
     return Container(
-      padding: EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+      padding: EdgeInsets.symmetric(horizontal: 10, vertical: 6),
       decoration: BoxDecoration(
-        color: _getTypeColor(type).withOpacity(0.1),
-        borderRadius: BorderRadius.circular(4),
+        color: color.withValues(alpha: 0.1),
+        borderRadius: BorderRadius.circular(12),
       ),
-      child: Text(
-        type.replaceAll('_', ' '),
-        style: TextStyle(
-          color: _getTypeColor(type),
-          fontSize: 11,
-          fontWeight: FontWeight.w500,
-        ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(icon, size: 14, color: color),
+          SizedBox(width: 4),
+          Text(
+            type.replaceAll('_', ' '),
+            style: TextStyle(
+              color: color,
+              fontSize: 11,
+              fontWeight: FontWeight.w600,
+            ),
+          ),
+        ],
       ),
     );
   }

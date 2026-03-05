@@ -5,7 +5,6 @@ import '../../core/constants/app_colors.dart';
 import '../../core/constants/app_constants.dart';
 import '../../core/utils/responsive.dart';
 import '../../core/utils/formatters.dart';
-import '../../widgets/layout/main_layout.dart';
 import '../../widgets/common/loading_widget.dart';
 import '../../widgets/common/error_widget.dart' as custom_error;
 
@@ -16,40 +15,37 @@ class GoldManagementScreen extends StatelessWidget {
   Widget build(BuildContext context) {
     final controller = Get.find<GoldController>();
 
-    return MainLayout(
-      title: 'Gold Management',
-      child: Obx(() {
-        if (controller.isLoading.value && controller.currentPrice.value == null) {
-          return LoadingWidget(message: 'Loading gold prices...');
-        }
+    return Obx(() {
+      if (controller.isLoading.value && controller.currentPrice.value == null) {
+        return LoadingWidget(message: 'Loading gold prices...');
+      }
 
-        if (controller.errorMessage.value.isNotEmpty && controller.currentPrice.value == null) {
-          return custom_error.CustomErrorWidget(
-            message: controller.errorMessage.value,
-            onRetry: controller.refresh,
-          );
-        }
-
-        return SingleChildScrollView(
-          padding: EdgeInsets.all(AppConstants.defaultPadding),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              // Current Prices Card
-              _buildCurrentPricesCard(context, controller),
-              SizedBox(height: 24),
-
-              // Update Price Card
-              _buildUpdatePriceCard(context, controller),
-              SizedBox(height: 24),
-
-              // Price Information
-              _buildPriceInformation(context),
-            ],
-          ),
+      if (controller.errorMessage.value.isNotEmpty && controller.currentPrice.value == null) {
+        return custom_error.CustomErrorWidget(
+          message: controller.errorMessage.value,
+          onRetry: controller.refresh,
         );
-      }),
-    );
+      }
+
+      return SingleChildScrollView(
+        padding: EdgeInsets.all(AppConstants.defaultPadding),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            // Current Prices Card
+            _buildCurrentPricesCard(context, controller),
+            SizedBox(height: 24),
+
+            // Update Price Card
+            _buildUpdatePriceCard(context, controller),
+            SizedBox(height: 24),
+
+            // Price Information
+            _buildPriceInformation(context),
+          ],
+        ),
+      );
+    });
   }
 
   Widget _buildCurrentPricesCard(BuildContext context, GoldController controller) {

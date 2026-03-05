@@ -61,23 +61,21 @@ class _CreditGramsScreenState extends State<CreditGramsScreen> {
 
   @override
   Widget build(BuildContext context) {
-    return MainLayout(
-      title: 'Credit Grams',
-      child: SingleChildScrollView(
-        padding: EdgeInsets.all(AppConstants.defaultPadding),
-        child: Center(
-          child: Container(
-            constraints: BoxConstraints(maxWidth: 600),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: [
-                Card(
-                  child: Padding(
-                    padding: EdgeInsets.all(AppConstants.defaultPadding * 2),
-                    child: Form(
-                      key: _formKey,
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.stretch,
+    return SingleChildScrollView(
+      padding: EdgeInsets.all(AppConstants.defaultPadding),
+      child: Center(
+        child: Container(
+          constraints: BoxConstraints(maxWidth: 600),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              Card(
+                child: Padding(
+                  padding: EdgeInsets.all(AppConstants.defaultPadding * 2),
+                  child: Form(
+                    key: _formKey,
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.stretch,
                         children: [
                           // Title
                           Row(
@@ -202,7 +200,6 @@ class _CreditGramsScreenState extends State<CreditGramsScreen> {
             ),
           ),
         ),
-      ),
-    );
+      );
   }
 }

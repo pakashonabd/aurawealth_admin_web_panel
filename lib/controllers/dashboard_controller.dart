@@ -48,22 +48,22 @@ class DashboardController extends GetxController {
           .where((t) => t.type.contains('EXCHANGE'))
           .length;
       totalPendingTransactions.value = allTransactions
-          .where((t) => t.status == 'PENDING')
+          .where((t) => t.status.toLowerCase() == 'pending')
           .length;
       
       // Calculate total gold holdings (sum of all buy transactions minus sell/exchange)
       final totalBuyGrams = allTransactions
-          .where((t) => t.type.contains('BUY') && t.status != 'REJECTED')
+          .where((t) => t.type.contains('BUY') && t.status.toLowerCase() != 'rejected')
           .fold(0.0, (sum, t) => sum + t.grams);
       final totalSellGrams = allTransactions
           .where((t) => (t.type.contains('SELL') || t.type.contains('EXCHANGE')) 
-              && t.status != 'REJECTED' && t.status != 'PENDING')
+              && t.status.toLowerCase() != 'rejected' && t.status.toLowerCase() != 'pending')
           .fold(0.0, (sum, t) => sum + t.grams);
       totalGoldHoldings.value = totalBuyGrams - totalSellGrams;
       
       // Calculate total revenue (fee amounts from all approved transactions)
       totalRevenue.value = allTransactions
-          .where((t) => t.status != 'REJECTED')
+          .where((t) => t.status.toLowerCase() != 'rejected')
           .fold(0.0, (sum, t) => sum + t.feeAmount);
 
       // Get recent transactions (last 10)
@@ -71,7 +71,7 @@ class DashboardController extends GetxController {
       
       // Get pending transactions
       pendingTransactions.value = allTransactions
-          .where((t) => t.status == 'PENDING')
+          .where((t) => t.status.toLowerCase() == 'pending')
           .toList();
 
     } catch (e) {

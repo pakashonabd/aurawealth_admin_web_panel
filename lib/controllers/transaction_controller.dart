@@ -112,10 +112,10 @@ class TransactionController extends GetxController {
     applyFilters();
   }
 
-  Future<void> markAsPaid(String txId) async {
+  Future<void> approveTransaction(String txId, {String? note}) async {
     try {
-      await _apiService.markAsPaid(txId);
-      Get.snackbar('Success', 'Transaction marked as paid');
+      await _apiService.approveTransaction(txId, note: note);
+      Get.snackbar('Success', 'Transaction approved successfully');
       loadTransactions();
     } catch (e) {
       Get.snackbar('Error', e.toString().replaceAll('Exception: ', ''));
@@ -125,7 +125,7 @@ class TransactionController extends GetxController {
   Future<void> rejectTransaction(String txId, {String? note}) async {
     try {
       await _apiService.rejectTransaction(txId, note: note);
-      Get.snackbar('Success', 'Transaction rejected');
+      Get.snackbar('Success', 'Transaction rejected successfully');
       loadTransactions();
     } catch (e) {
       Get.snackbar('Error', e.toString().replaceAll('Exception: ', ''));

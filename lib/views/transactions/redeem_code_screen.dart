@@ -55,24 +55,22 @@ class _RedeemCodeScreenState extends State<RedeemCodeScreen> {
 
   @override
   Widget build(BuildContext context) {
-    return MainLayout(
-      title: 'Redeem Code',
-      child: SingleChildScrollView(
-        padding: EdgeInsets.all(AppConstants.defaultPadding),
-        child: Center(
-          child: Container(
-            constraints: BoxConstraints(maxWidth: 600),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: [
-                Card(
-                  child: Padding(
-                    padding: EdgeInsets.all(AppConstants.defaultPadding * 2),
-                    child: Form(
-                      key: _formKey,
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.stretch,
-                        children: [
+    return SingleChildScrollView(
+      padding: EdgeInsets.all(AppConstants.defaultPadding),
+      child: Center(
+        child: Container(
+          constraints: BoxConstraints(maxWidth: 600),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              Card(
+                child: Padding(
+                  padding: EdgeInsets.all(AppConstants.defaultPadding * 2),
+                  child: Form(
+                    key: _formKey,
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.stretch,
+                      children: [
                           // Title
                           Row(
                             children: [
@@ -246,8 +244,7 @@ class _RedeemCodeScreenState extends State<RedeemCodeScreen> {
             ),
           ),
         ),
-      ),
-    );
+      );
   }
 
   Widget _buildInstructionStep(String number, String title, String description) {

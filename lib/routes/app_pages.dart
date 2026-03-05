@@ -1,23 +1,22 @@
 import 'package:get/get.dart';
 import '../views/auth/login_screen.dart';
-import '../views/dashboard/dashboard_screen.dart';
-import '../views/transactions/transactions_screen.dart';
-import '../views/users/users_screen.dart';
-import '../views/gold_management/gold_management_screen.dart';
-import '../views/messages/messages_screen.dart';
-import '../views/transactions/credit_grams_screen.dart';
-import '../views/transactions/redeem_code_screen.dart';
+import '../views/main_container.dart';
 import '../middleware/auth_middleware.dart';
 import '../controllers/auth_controller.dart';
-import '../controllers/dashboard_controller.dart';
-import '../controllers/transaction_controller.dart';
-import '../controllers/user_controller.dart';
-import '../controllers/gold_controller.dart';
-import '../controllers/message_controller.dart';
+import '../controllers/navigation_controller.dart';
 import 'app_routes.dart';
 
+// Main binding for all protected routes
+class MainBinding extends Bindings {
+  @override
+  void dependencies() {
+    Get.lazyPut<AuthController>(() => AuthController(), fenix: true);
+    Get.lazyPut<NavigationController>(() => NavigationController(), fenix: true);
+  }
+}
+
 class AppPages {
-  static final routes = [
+  static final List<GetPage<dynamic>> routes = [
     GetPage(
       name: AppRoutes.login,
       page: () => LoginScreen(),
@@ -25,66 +24,48 @@ class AppPages {
         Get.lazyPut<AuthController>(() => AuthController());
       }),
     ),
+    // All protected routes now use MainContainer with shared binding
     GetPage(
       name: AppRoutes.dashboard,
-      page: () => DashboardScreen(),
+      page: () => MainContainer(),
       middlewares: [AuthMiddleware()],
-      binding: BindingsBuilder(() {
-        Get.lazyPut<AuthController>(() => AuthController());
-        Get.lazyPut<DashboardController>(() => DashboardController());
-      }),
+      binding: MainBinding(),
     ),
     GetPage(
       name: AppRoutes.transactions,
-      page: () => TransactionsScreen(),
+      page: () => MainContainer(),
       middlewares: [AuthMiddleware()],
-      binding: BindingsBuilder(() {
-        Get.lazyPut<AuthController>(() => AuthController());
-        Get.lazyPut<TransactionController>(() => TransactionController());
-      }),
+      binding: MainBinding(),
     ),
     GetPage(
       name: AppRoutes.users,
-      page: () => UsersScreen(),
+      page: () => MainContainer(),
       middlewares: [AuthMiddleware()],
-      binding: BindingsBuilder(() {
-        Get.lazyPut<AuthController>(() => AuthController());
-        Get.lazyPut<UserController>(() => UserController());
-      }),
+      binding: MainBinding(),
     ),
     GetPage(
       name: AppRoutes.goldManagement,
-      page: () => GoldManagementScreen(),
+      page: () => MainContainer(),
       middlewares: [AuthMiddleware()],
-      binding: BindingsBuilder(() {
-        Get.lazyPut<AuthController>(() => AuthController());
-        Get.lazyPut<GoldController>(() => GoldController());
-      }),
+      binding: MainBinding(),
     ),
     GetPage(
       name: AppRoutes.messages,
-      page: () => MessagesScreen(),
+      page: () => MainContainer(),
       middlewares: [AuthMiddleware()],
-      binding: BindingsBuilder(() {
-        Get.lazyPut<AuthController>(() => AuthController());
-        Get.lazyPut<MessageController>(() => MessageController());
-      }),
+      binding: MainBinding(),
     ),
     GetPage(
       name: AppRoutes.creditGrams,
-      page: () => CreditGramsScreen(),
+      page: () => MainContainer(),
       middlewares: [AuthMiddleware()],
-      binding: BindingsBuilder(() {
-        Get.lazyPut<AuthController>(() => AuthController());
-      }),
+      binding: MainBinding(),
     ),
     GetPage(
       name: AppRoutes.redeemCode,
-      page: () => RedeemCodeScreen(),
+      page: () => MainContainer(),
       middlewares: [AuthMiddleware()],
-      binding: BindingsBuilder(() {
-        Get.lazyPut<AuthController>(() => AuthController());
-      }),
+      binding: MainBinding(),
     ),
   ];
 }
