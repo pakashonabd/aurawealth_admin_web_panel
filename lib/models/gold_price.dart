@@ -13,13 +13,27 @@ class GoldPrice {
     required this.createdAt,
   });
 
+  static double _toDouble(dynamic v) {
+    if (v == null) return 0.0;
+    if (v is double) return v;
+    if (v is int) return v.toDouble();
+    if (v is String) return double.tryParse(v) ?? 0.0;
+    return 0.0;
+  }
+
   factory GoldPrice.fromJson(Map<String, dynamic> json) {
+    DateTime createdAt;
+    try {
+      createdAt = DateTime.parse(json['created_at']?.toString() ?? '');
+    } catch (_) {
+      createdAt = DateTime.now();
+    }
     return GoldPrice(
-      price: (json['price'] ?? 0).toDouble(),
-      bankSellPrice: (json['bank_sell_price'] ?? 0).toDouble(),
-      exchangePrice: (json['exchange_price'] ?? 0).toDouble(),
-      storeSellPrice: (json['store_sell_price'] ?? 0).toDouble(),
-      createdAt: DateTime.parse(json['created_at']),
+      price: _toDouble(json['price']),
+      bankSellPrice: _toDouble(json['bank_sell_price']),
+      exchangePrice: _toDouble(json['exchange_price']),
+      storeSellPrice: _toDouble(json['store_sell_price']),
+      createdAt: createdAt,
     );
   }
 

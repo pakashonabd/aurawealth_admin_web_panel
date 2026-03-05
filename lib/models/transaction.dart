@@ -37,33 +37,38 @@ class Transaction {
     this.userEmail,
   });
 
+  static double _d(dynamic v) {
+    if (v == null) return 0.0;
+    if (v is double) return v;
+    if (v is int) return v.toDouble();
+    if (v is String) return double.tryParse(v) ?? 0.0;
+    return 0.0;
+  }
+
+  static DateTime? _dt(dynamic v) {
+    if (v == null) return null;
+    try { return DateTime.parse(v.toString()); } catch (_) { return null; }
+  }
+
   factory Transaction.fromJson(Map<String, dynamic> json) {
     return Transaction(
-      id: json['id'] ?? '',
-      type: json['type'] ?? '',
-      status: json['status'] ?? '',
-      grams: (json['grams'] ?? 0).toDouble(),
-      amountBdt: (json['amount_bdt'] ?? 0).toDouble(),
-      feePercent: (json['fee_percent'] ?? 0).toDouble(),
-      feeAmount: (json['fee_amount'] ?? 0).toDouble(),
-      code: json['code'],
-      expiryTime: json['expiry_time'] != null 
-          ? DateTime.parse(json['expiry_time']) 
-          : null,
-      createdAt: DateTime.parse(json['created_at']),
-      approvedAt: json['approved_at'] != null 
-          ? DateTime.parse(json['approved_at']) 
-          : null,
-      paidAt: json['paid_at'] != null 
-          ? DateTime.parse(json['paid_at']) 
-          : null,
-      rejectedAt: json['rejected_at'] != null 
-          ? DateTime.parse(json['rejected_at']) 
-          : null,
-      adminNote: json['admin_note'],
-      userId: json['user_id'],
-      userName: json['user_name'],
-      userEmail: json['user_email'],
+      id: json['id']?.toString() ?? '',
+      type: json['type']?.toString() ?? '',
+      status: json['status']?.toString() ?? '',
+      grams: _d(json['grams']),
+      amountBdt: _d(json['amount_bdt']),
+      feePercent: _d(json['fee_percent']),
+      feeAmount: _d(json['fee_amount']),
+      code: json['code']?.toString(),
+      expiryTime: _dt(json['expiry_time']),
+      createdAt: _dt(json['created_at']) ?? DateTime.now(),
+      approvedAt: _dt(json['approved_at']),
+      paidAt: _dt(json['paid_at']),
+      rejectedAt: _dt(json['rejected_at']),
+      adminNote: json['admin_note']?.toString(),
+      userId: json['user_id']?.toString(),
+      userName: json['user_name']?.toString(),
+      userEmail: json['user_email']?.toString(),
     );
   }
 

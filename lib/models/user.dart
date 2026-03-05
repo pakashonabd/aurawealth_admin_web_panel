@@ -23,18 +23,32 @@ class User {
     this.availableGrams,
   });
 
+  static double? _d(dynamic v) {
+    if (v == null) return null;
+    if (v is double) return v;
+    if (v is int) return v.toDouble();
+    if (v is String) return double.tryParse(v);
+    return null;
+  }
+
   factory User.fromJson(Map<String, dynamic> json) {
+    DateTime createdAt;
+    try {
+      createdAt = DateTime.parse(json['created_at']?.toString() ?? '');
+    } catch (_) {
+      createdAt = DateTime.now();
+    }
     return User(
-      id: json['id'] ?? json['user_id'] ?? '',
-      firebaseUid: json['firebase_uid'],
-      email: json['email'],
-      phoneNumber: json['phone_number'],
-      createdAt: DateTime.parse(json['created_at']),
-      phoneVerified: json['phone_verified'] ?? false,
-      kycStatus: json['kyc_status'] ?? 'pending',
-      totalGrams: json['total_grams']?.toDouble(),
-      lockedGrams: json['locked_grams']?.toDouble(),
-      availableGrams: json['available_grams']?.toDouble(),
+      id: json['id']?.toString() ?? json['user_id']?.toString() ?? '',
+      firebaseUid: json['firebase_uid']?.toString(),
+      email: json['email']?.toString(),
+      phoneNumber: json['phone_number']?.toString(),
+      createdAt: createdAt,
+      phoneVerified: json['phone_verified'] == true || json['phone_verified'] == 1,
+      kycStatus: json['kyc_status']?.toString() ?? 'pending',
+      totalGrams: _d(json['total_grams']),
+      lockedGrams: _d(json['locked_grams']),
+      availableGrams: _d(json['available_grams']),
     );
   }
 

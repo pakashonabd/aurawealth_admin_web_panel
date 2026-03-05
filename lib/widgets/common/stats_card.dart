@@ -40,60 +40,61 @@ class StatsCard extends StatelessWidget {
           ),
         ),
         child: Padding(
-          padding: EdgeInsets.all(AppConstants.defaultPadding),
+          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
+            mainAxisSize: MainAxisSize.min,
             children: [
+              // Icon + spacer row
               Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Container(
-                    padding: EdgeInsets.all(12),
+                    padding: const EdgeInsets.all(8),
                     decoration: BoxDecoration(
                       color: cardColor.withValues(alpha: 0.12),
-                      borderRadius: BorderRadius.circular(12),
-                      boxShadow: [
-                        BoxShadow(
-                          color: cardColor.withValues(alpha: 0.1),
-                          blurRadius: 8,
-                          offset: Offset(0, 2),
-                        ),
-                      ],
+                      borderRadius: BorderRadius.circular(10),
                     ),
-                    child: Icon(
-                      icon,
-                      color: cardColor,
-                      size: 28,
-                    ),
+                    child: Icon(icon, color: cardColor, size: 20),
                   ),
-                  Spacer(),
                 ],
               ),
-              SizedBox(height: 16),
+              const SizedBox(height: 10),
+              // Title
               Text(
                 title,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
                 style: TextStyle(
-                  fontSize: 13,
+                  fontSize: 11,
                   color: AppColors.grey600,
                   fontWeight: FontWeight.w500,
-                  letterSpacing: 0.3,
+                  letterSpacing: 0.2,
                 ),
               ),
-              SizedBox(height: 8),
-              Text(
-                value,
-                style: TextStyle(
-                  fontSize: 32,
-                  fontWeight: FontWeight.bold,
-                  color: AppColors.textPrimary,
-                  height: 1.2,
+              const SizedBox(height: 4),
+              // Value
+              FittedBox(
+                fit: BoxFit.scaleDown,
+                alignment: Alignment.centerLeft,
+                child: Text(
+                  value,
+                  style: TextStyle(
+                    fontSize: 24,
+                    fontWeight: FontWeight.bold,
+                    color: AppColors.textPrimary,
+                    height: 1.1,
+                  ),
                 ),
               ),
               if (subtitle != null) ...[
-                SizedBox(height: 4),
+                const SizedBox(height: 2),
                 Text(
                   subtitle!,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
                   style: TextStyle(
-                    fontSize: 12,
+                    fontSize: 11,
                     color: AppColors.grey600,
                   ),
                 ),
