@@ -123,9 +123,11 @@ class DashboardScreen extends StatelessWidget {
   Widget _buildPendingTransactions(
       BuildContext context, DashboardController controller) {
     return Card(
-      elevation: 2,
+      elevation: 1,
+      color: Colors.white,
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(16),
+        side: BorderSide(color: AppColors.grey200),
       ),
       child: Padding(
         padding: EdgeInsets.all(AppConstants.defaultPadding),
@@ -135,15 +137,16 @@ class DashboardScreen extends StatelessWidget {
             Row(
               children: [
                 Container(
-                  padding: EdgeInsets.all(10),
+                  padding: EdgeInsets.all(8),
                   decoration: BoxDecoration(
-                    color: AppColors.warning.withValues(alpha: 0.12),
-                    borderRadius: BorderRadius.circular(12),
+                    color: Colors.white,
+                    borderRadius: BorderRadius.circular(10),
+                    border: Border.all(color: AppColors.grey200),
                   ),
                   child: Icon(
                     Icons.pending_actions,
                     color: AppColors.warning,
-                    size: 22,
+                    size: 20,
                   ),
                 ),
                 SizedBox(width: 12),
@@ -151,20 +154,22 @@ class DashboardScreen extends StatelessWidget {
                   'Pending Transactions',
                   style: Theme.of(context).textTheme.headlineSmall?.copyWith(
                     fontWeight: FontWeight.bold,
+                    color: AppColors.textPrimary,
                   ),
                 ),
                 Spacer(),
                 Container(
                   padding: EdgeInsets.symmetric(horizontal: 12, vertical: 6),
                   decoration: BoxDecoration(
-                    color: AppColors.warning.withValues(alpha: 0.12),
+                    color: Colors.white,
                     borderRadius: BorderRadius.circular(20),
+                    border: Border.all(color: AppColors.grey200),
                   ),
                   child: Text(
                     '${controller.pendingTransactions.length}',
                     style: TextStyle(
-                      color: AppColors.warning,
-                      fontSize: 14,
+                      color: AppColors.textPrimary,
+                      fontSize: 13,
                       fontWeight: FontWeight.bold,
                     ),
                   ),
@@ -182,9 +187,11 @@ class DashboardScreen extends StatelessWidget {
   Widget _buildRecentTransactions(
       BuildContext context, DashboardController controller) {
     return Card(
-      elevation: 2,
+      elevation: 1,
+      color: Colors.white,
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(16),
+        side: BorderSide(color: AppColors.grey200),
       ),
       child: Padding(
         padding: EdgeInsets.all(AppConstants.defaultPadding),
@@ -194,15 +201,16 @@ class DashboardScreen extends StatelessWidget {
             Row(
               children: [
                 Container(
-                  padding: EdgeInsets.all(10),
+                  padding: EdgeInsets.all(8),
                   decoration: BoxDecoration(
-                    color: AppColors.primary.withValues(alpha: 0.12),
-                    borderRadius: BorderRadius.circular(12),
+                    color: Colors.white,
+                    borderRadius: BorderRadius.circular(10),
+                    border: Border.all(color: AppColors.grey200),
                   ),
                   child: Icon(
                     Icons.history,
                     color: AppColors.primary,
-                    size: 22,
+                    size: 20,
                   ),
                 ),
                 SizedBox(width: 12),
@@ -210,6 +218,7 @@ class DashboardScreen extends StatelessWidget {
                   'Recent Transactions',
                   style: Theme.of(context).textTheme.headlineSmall?.copyWith(
                     fontWeight: FontWeight.bold,
+                    color: AppColors.textPrimary,
                   ),
                 ),
                 Spacer(),
@@ -344,16 +353,16 @@ class DashboardScreen extends StatelessWidget {
     }
 
     return Container(
-      padding: EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+      padding: EdgeInsets.symmetric(horizontal: 8, vertical: 4),
       decoration: BoxDecoration(
-        color: color.withValues(alpha: 0.1),
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: color.withValues(alpha: 0.3)),
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(color: color),
       ),
       child: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
-          Icon(icon, size: 14, color: color),
+          Icon(icon, size: 12, color: color),
           SizedBox(width: 4),
           Text(
             statusUpper,
@@ -374,15 +383,16 @@ class DashboardScreen extends StatelessWidget {
     final icon = _getTypeIcon(type);
 
     return Container(
-      padding: EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+      padding: EdgeInsets.symmetric(horizontal: 8, vertical: 4),
       decoration: BoxDecoration(
-        color: color.withValues(alpha: 0.1),
-        borderRadius: BorderRadius.circular(12),
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(color: color),
       ),
       child: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
-          Icon(icon, size: 14, color: color),
+          Icon(icon, size: 12, color: color),
           SizedBox(width: 4),
           Text(
             type.replaceAll('_', ' '),

@@ -218,7 +218,7 @@ class UsersScreen extends StatelessWidget {
               Container(
                 padding: EdgeInsets.all(AppConstants.defaultPadding),
                 decoration: BoxDecoration(
-                  color: AppColors.primary.withOpacity(0.1),
+                  color: Colors.white,
                   border: Border(
                     bottom: BorderSide(color: AppColors.grey200),
                   ),
@@ -387,7 +387,7 @@ class UsersScreen extends StatelessWidget {
     }
 
     return CircleAvatar(
-      backgroundColor: color.withOpacity(0.1),
+      backgroundColor: Colors.white,
       child: Icon(icon, color: color, size: 20),
     );
   }

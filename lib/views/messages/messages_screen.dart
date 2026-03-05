@@ -122,9 +122,10 @@ class MessagesScreen extends StatelessWidget {
 
       return Container(
         decoration: BoxDecoration(
-          color: isSelected ? AppColors.primary.withOpacity(0.1) : null,
+          color: isSelected ? AppColors.grey100 : Colors.white,
           border: Border(
             bottom: BorderSide(color: AppColors.grey200, width: 1),
+            left: isSelected ? BorderSide(color: AppColors.primary, width: 3) : BorderSide.none,
           ),
         ),
         child: ListTile(
@@ -275,14 +276,10 @@ class MessagesScreen extends StatelessWidget {
         margin: EdgeInsets.only(bottom: 12),
         padding: EdgeInsets.all(12),
         decoration: BoxDecoration(
-          color: isFromUser
-              ? AppColors.grey100
-              : AppColors.primary.withOpacity(0.1),
+          color: Colors.white,
           borderRadius: BorderRadius.circular(12),
           border: Border.all(
-            color: isFromUser
-                ? AppColors.grey300
-                : AppColors.primary.withOpacity(0.3),
+            color: isFromUser ? AppColors.grey300 : AppColors.primary,
           ),
         ),
         child: Column(
