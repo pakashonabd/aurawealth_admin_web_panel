@@ -4,7 +4,6 @@ import '../../services/api_service.dart';
 import '../../core/constants/app_colors.dart';
 import '../../core/constants/app_constants.dart';
 import '../../core/utils/formatters.dart';
-import '../../widgets/layout/main_layout.dart';
 
 class CreditGramsScreen extends StatefulWidget {
   const CreditGramsScreen({Key? key}) : super(key: key);
@@ -36,12 +35,12 @@ class _CreditGramsScreenState extends State<CreditGramsScreen> {
       final userId = _userIdController.text.trim();
       final grams = double.parse(_gramsController.text.trim());
 
-      final response = await _apiService.creditGrams(userId, grams);
+      await _apiService.creditGrams(userId, grams);
 
       Get.snackbar(
         'Success',
         'Successfully credited ${Formatters.formatGrams(grams)} to user',
-        backgroundColor: AppColors.success.withOpacity(0.1),
+        backgroundColor: AppColors.success.withValues(alpha: 0.1),
         colorText: AppColors.success,
       );
 
@@ -51,7 +50,7 @@ class _CreditGramsScreenState extends State<CreditGramsScreen> {
       Get.snackbar(
         'Error',
         e.toString().replaceAll('Exception: ', ''),
-        backgroundColor: AppColors.error.withOpacity(0.1),
+        backgroundColor: AppColors.error.withValues(alpha: 0.1),
         colorText: AppColors.error,
       );
     } finally {
@@ -155,9 +154,9 @@ class _CreditGramsScreenState extends State<CreditGramsScreen> {
                           Container(
                             padding: EdgeInsets.all(12),
                             decoration: BoxDecoration(
-                              color: AppColors.info.withOpacity(0.1),
+                              color: AppColors.info.withValues(alpha: 0.1),
                               borderRadius: BorderRadius.circular(8),
-                              border: Border.all(color: AppColors.info.withOpacity(0.3)),
+                              border: Border.all(color: AppColors.info.withValues(alpha: 0.3)),
                             ),
                             child: Row(
                               children: [

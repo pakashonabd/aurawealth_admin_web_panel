@@ -13,33 +13,29 @@ class ApiService {
 
   Map<String, String> _getHeaders({bool isFormData = false}) {
     final headers = <String, String>{};
-    
     if (isFormData) {
       headers['Content-Type'] = 'application/x-www-form-urlencoded';
     } else {
       headers['Content-Type'] = 'application/json';
     }
-    
     final token = _storage.getAuthToken();
     if (token != null) {
       headers['Authorization'] = 'Bearer $token';
     }
-    
     return headers;
   }
 
-  Future<Map<String, dynamic>> _handleResponse(http.Response response) async {
+  // Returns decoded body or throws — NOT async so callers get a real value
+  dynamic _parseResponse(http.Response response) {
     if (response.statusCode >= 200 && response.statusCode < 300) {
-      if (response.body.isEmpty) {
-        return {'success': true};
-      }
+      if (response.body.isEmpty) return <String, dynamic>{'success': true};
       return json.decode(response.body);
     } else {
       String errorMessage = 'An error occurred';
       try {
         final errorBody = json.decode(response.body);
         errorMessage = errorBody['detail'] ?? errorBody['message'] ?? errorMessage;
-      } catch (e) {
+      } catch (_) {
         errorMessage = response.body.isNotEmpty ? response.body : 'HTTP ${response.statusCode}';
       }
       throw Exception(errorMessage);
@@ -50,138 +46,114 @@ class ApiService {
   Future<Map<String, dynamic>> adminLogin(String email, String password) async {
     final url = Uri.parse('${AppConstants.baseUrl}${ApiEndpoints.adminLogin}');
     final body = 'username=$email&password=$password';
-    
     final response = await http.post(
       url,
       headers: _getHeaders(isFormData: true),
       body: body,
     ).timeout(Duration(seconds: AppConstants.apiTimeout));
-
-    return _handleResponse(response);
+    return _parseResponse(response) as Map<String, dynamic>;
   }
 
-  // Get Admin Dashboard
+  // Get Admin Dashboard – returns a List
   Future<List<dynamic>> getAdminDashboard({String? status}) async {
     var url = '${AppConstants.baseUrl}${ApiEndpoints.adminDashboard}';
     if (status != null && status.isNotEmpty) {
       url += '?status=$status';
     }
-    
     final response = await http.get(
       Uri.parse(url),
       headers: _getHeaders(),
     ).timeout(Duration(seconds: AppConstants.apiTimeout));
-
-    return await _handleResponse(response) as List<dynamic>;
+    final decoded = _parseResponse(response);
+    if (decoded is List) return decoded;
+    // Some backends wrap in a key
+    if (decoded is Map && decoded.containsKey('transactions')) {
+      return decoded['transactions'] as List<dynamic>;
+    }
+    return [];
   }
 
   // Set Gold Price
   Future<Map<String, dynamic>> setGoldPrice(double price) async {
     final url = Uri.parse('${AppConstants.baseUrl}${ApiEndpoints.setPrice}');
     final body = json.encode({'price': price});
-    
     final response = await http.post(
       url,
       headers: _getHeaders(),
       body: body,
     ).timeout(Duration(seconds: AppConstants.apiTimeout));
-
-    return _handleResponse(response);
+    return _parseResponse(response) as Map<String, dynamic>;
   }
 
   // Get Current Gold Price
   Future<Map<String, dynamic>> getGoldPrice() async {
     final url = Uri.parse('${AppConstants.baseUrl}${ApiEndpoints.getPrice}');
-    
     final response = await http.get(
       url,
       headers: _getHeaders(),
     ).timeout(Duration(seconds: AppConstants.apiTimeout));
-
-    return _handleResponse(response);
+    return _parseResponse(response) as Map<String, dynamic>;
   }
 
   // Credit Grams (In-Store Purchase)
   Future<Map<String, dynamic>> creditGrams(String userId, double grams) async {
     final url = Uri.parse('${AppConstants.baseUrl}${ApiEndpoints.adminBuyCredit}');
-    final body = json.encode({
-      'user_id': userId,
-      'grams': grams,
-    });
-    
+    final body = json.encode({'user_id': userId, 'grams': grams});
     final response = await http.post(
       url,
       headers: _getHeaders(),
       body: body,
     ).timeout(Duration(seconds: AppConstants.apiTimeout));
-
-    return _handleResponse(response);
+    return _parseResponse(response) as Map<String, dynamic>;
   }
 
   // Redeem Code
   Future<Map<String, dynamic>> redeemCode(String code) async {
     final url = Uri.parse('${AppConstants.baseUrl}${ApiEndpoints.adminRedeemCode(code)}');
-    
     final response = await http.post(
       url,
       headers: _getHeaders(),
     ).timeout(Duration(seconds: AppConstants.apiTimeout));
-
-    return _handleResponse(response);
+    return _parseResponse(response) as Map<String, dynamic>;
   }
 
   // Approve Transaction
   Future<Map<String, dynamic>> approveTransaction(String txId, {String? note}) async {
     final url = Uri.parse('${AppConstants.baseUrl}${ApiEndpoints.adminApprove(txId)}');
-    final body = note != null ? json.encode({'note': note}) : json.encode({});
-
+    final body = json.encode(note != null ? {'note': note} : <String, dynamic>{});
     final response = await http.post(
       url,
       headers: _getHeaders(),
       body: body,
     ).timeout(Duration(seconds: AppConstants.apiTimeout));
-
-    return _handleResponse(response);
+    return _parseResponse(response) as Map<String, dynamic>;
   }
 
   // Reject Transaction
   Future<Map<String, dynamic>> rejectTransaction(String txId, {String? note}) async {
     final url = Uri.parse('${AppConstants.baseUrl}${ApiEndpoints.adminReject(txId)}');
-    final body = note != null ? json.encode({'note': note}) : json.encode({});
-
+    final body = json.encode(note != null ? {'note': note} : <String, dynamic>{});
     final response = await http.post(
       url,
       headers: _getHeaders(),
       body: body,
     ).timeout(Duration(seconds: AppConstants.apiTimeout));
-
-    return _handleResponse(response);
-  }
-
-  // Update Paid Status (mark as paid or unpaid)
-  Future<Map<String, dynamic>> updatePaidStatus(String txId, bool isPaid) async {
-    final url = Uri.parse('${AppConstants.baseUrl}${ApiEndpoints.adminPaidStatus(txId)}');
-    final body = json.encode({'is_paid': isPaid});
-
-    final response = await http.put(
-      url,
-      headers: _getHeaders(),
-      body: body,
-    ).timeout(Duration(seconds: AppConstants.apiTimeout));
-
-    return _handleResponse(response);
+    return _parseResponse(response) as Map<String, dynamic>;
   }
 
   // Get Message Threads
   Future<List<dynamic>> getMessageThreads() async {
     final url = Uri.parse('${AppConstants.baseUrl}${ApiEndpoints.adminMessages}');
-    
     final response = await http.get(
       url,
       headers: _getHeaders(),
     ).timeout(Duration(seconds: AppConstants.apiTimeout));
-
-    return await _handleResponse(response) as List<dynamic>;
+    final decoded = _parseResponse(response);
+    if (decoded is List) return decoded;
+    if (decoded is Map && decoded.containsKey('messages')) {
+      return decoded['messages'] as List<dynamic>;
+    }
+    return [];
   }
 
   // Get User Messages
@@ -191,26 +163,27 @@ class ApiService {
     if (limit != null) params.add('limit=$limit');
     if (offset != null) params.add('offset=$offset');
     if (params.isNotEmpty) url += '?${params.join('&')}';
-    
     final response = await http.get(
       Uri.parse(url),
       headers: _getHeaders(),
     ).timeout(Duration(seconds: AppConstants.apiTimeout));
-
-    return await _handleResponse(response) as List<dynamic>;
+    final decoded = _parseResponse(response);
+    if (decoded is List) return decoded;
+    if (decoded is Map && decoded.containsKey('messages')) {
+      return decoded['messages'] as List<dynamic>;
+    }
+    return [];
   }
 
   // Reply to User Message
   Future<Map<String, dynamic>> replyToUser(String userId, String message) async {
     final url = Uri.parse('${AppConstants.baseUrl}${ApiEndpoints.adminReplyMessage(userId)}');
     final body = json.encode({'body': message});
-    
     final response = await http.post(
       url,
       headers: _getHeaders(),
       body: body,
     ).timeout(Duration(seconds: AppConstants.apiTimeout));
-
-    return _handleResponse(response);
+    return _parseResponse(response) as Map<String, dynamic>;
   }
 }

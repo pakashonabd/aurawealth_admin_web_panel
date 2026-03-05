@@ -3,7 +3,6 @@ import 'package:get/get.dart';
 import '../../services/api_service.dart';
 import '../../core/constants/app_colors.dart';
 import '../../core/constants/app_constants.dart';
-import '../../widgets/layout/main_layout.dart';
 
 class RedeemCodeScreen extends StatefulWidget {
   const RedeemCodeScreen({Key? key}) : super(key: key);
@@ -31,12 +30,12 @@ class _RedeemCodeScreenState extends State<RedeemCodeScreen> {
 
     try {
       final code = _codeController.text.trim().toUpperCase();
-      final response = await _apiService.redeemCode(code);
+      await _apiService.redeemCode(code);
 
       Get.snackbar(
         'Success',
         'Code redeemed successfully! Transaction approved.',
-        backgroundColor: AppColors.success.withOpacity(0.1),
+        backgroundColor: AppColors.success.withValues(alpha: 0.1),
         colorText: AppColors.success,
       );
 
@@ -45,7 +44,7 @@ class _RedeemCodeScreenState extends State<RedeemCodeScreen> {
       Get.snackbar(
         'Error',
         e.toString().replaceAll('Exception: ', ''),
-        backgroundColor: AppColors.error.withOpacity(0.1),
+        backgroundColor: AppColors.error.withValues(alpha: 0.1),
         colorText: AppColors.error,
       );
     } finally {
@@ -133,10 +132,10 @@ class _RedeemCodeScreenState extends State<RedeemCodeScreen> {
                           Container(
                             padding: EdgeInsets.all(12),
                             decoration: BoxDecoration(
-                              color: AppColors.warning.withOpacity(0.1),
+                              color: AppColors.warning.withValues(alpha: 0.1),
                               borderRadius: BorderRadius.circular(8),
                               border: Border.all(
-                                color: AppColors.warning.withOpacity(0.3),
+                                color: AppColors.warning.withValues(alpha: 0.3),
                               ),
                             ),
                             child: Row(
@@ -167,9 +166,7 @@ class _RedeemCodeScreenState extends State<RedeemCodeScreen> {
                                     width: 20,
                                     child: CircularProgressIndicator(
                                       strokeWidth: 2,
-                                      valueColor: AlwaysStoppedAnimation<Color>(
-                                        Colors.white,
-                                      ),
+                                      valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
                                     ),
                                   )
                                 : Text('Redeem Code'),
@@ -215,7 +212,7 @@ class _RedeemCodeScreenState extends State<RedeemCodeScreen> {
                         Container(
                           padding: EdgeInsets.all(12),
                           decoration: BoxDecoration(
-                            color: AppColors.error.withOpacity(0.1),
+                            color: AppColors.error.withValues(alpha: 0.1),
                             borderRadius: BorderRadius.circular(8),
                           ),
                           child: Row(
