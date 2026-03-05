@@ -61,11 +61,6 @@ class SidebarMenu extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    // Get NavigationController if it exists, otherwise navigation won't work
-    final navigationController = Get.isRegistered<NavigationController>()
-        ? Get.find<NavigationController>()
-        : null;
-
     return Container(
       color: AppColors.background,
       child: Column(
@@ -99,53 +94,7 @@ class SidebarMenu extends StatelessWidget {
 
           // Menu Items
           Expanded(
-            child: navigationController != null
-                ? Obx(() => ListView.builder(
-                      padding: EdgeInsets.symmetric(vertical: 8),
-                      itemCount: menuItems.length,
-                      itemBuilder: (context, index) {
-                        final item = menuItems[index];
-                        final isSelected = navigationController.isSelected(item.route);
-
-                        return Container(
-                          margin: EdgeInsets.symmetric(
-                            horizontal: 8,
-                            vertical: 2,
-                          ),
-                          decoration: BoxDecoration(
-                            color: isSelected
-                                ? AppColors.primary.withValues(alpha: 0.1)
-                                : Colors.transparent,
-                            borderRadius: BorderRadius.circular(8),
-                          ),
-                          child: ListTile(
-                            leading: Icon(
-                              item.icon,
-                              color: isSelected ? AppColors.primary : AppColors.grey600,
-                            ),
-                            title: Text(
-                              item.title,
-                              style: TextStyle(
-                                color: isSelected
-                                    ? AppColors.primary
-                                    : AppColors.textPrimary,
-                                fontWeight:
-                                    isSelected ? FontWeight.w600 : FontWeight.normal,
-                              ),
-                            ),
-                            onTap: () {
-                              // Use NavigationController instead of Get.toNamed
-                              navigationController.navigateTo(item.route);
-                              // Close drawer on mobile/tablet
-                              if (Responsive.isMobile(context) || Responsive.isTablet(context)) {
-                                Navigator.of(context).pop();
-                              }
-                            },
-                          ),
-                        );
-                      },
-                    ))
-                : Center(child: CircularProgressIndicator()),
+            child: _buildMenuList(context),
           ),
 
           // Footer
@@ -168,5 +117,109 @@ class SidebarMenu extends StatelessWidget {
         ],
       ),
     );
+  }
+
+  Widget _buildMenuList(BuildContext context) {
+    // Try to get NavigationController
+    try {
+      final navigationController = Get.find<NavigationController>();
+
+      return Obx(() {
+        // Access the observable inside Obx
+        final currentRoute = navigationController.currentRoute.value;
+
+        return ListView.builder(
+          padding: EdgeInsets.symmetric(vertical: 8),
+          itemCount: menuItems.length,
+          itemBuilder: (context, index) {
+            final item = menuItems[index];
+            final isSelected = currentRoute == item.route;
+
+            return Container(
+              margin: EdgeInsets.symmetric(
+                horizontal: 8,
+                vertical: 2,
+              ),
+              decoration: BoxDecoration(
+                color: isSelected
+                    ? AppColors.primary.withValues(alpha: 0.1)
+                    : Colors.transparent,
+                borderRadius: BorderRadius.circular(8),
+              ),
+              child: ListTile(
+                leading: Icon(
+                  item.icon,
+                  color: isSelected ? AppColors.primary : AppColors.grey600,
+                ),
+                title: Text(
+                  item.title,
+                  style: TextStyle(
+                    color: isSelected
+                        ? AppColors.primary
+                        : AppColors.textPrimary,
+                    fontWeight:
+                        isSelected ? FontWeight.w600 : FontWeight.normal,
+                  ),
+                ),
+                onTap: () {
+                  // Use NavigationController instead of Get.toNamed
+                  navigationController.navigateTo(item.route);
+                  // Close drawer on mobile/tablet
+                  if (Responsive.isMobile(context) || Responsive.isTablet(context)) {
+                    Navigator.of(context).pop();
+                  }
+                },
+              ),
+            );
+          },
+        );
+      });
+    } catch (e) {
+      // Fallback if NavigationController not found
+      return ListView.builder(
+        padding: EdgeInsets.symmetric(vertical: 8),
+        itemCount: menuItems.length,
+        itemBuilder: (context, index) {
+          final item = menuItems[index];
+          final isSelected = Get.currentRoute == item.route;
+
+          return Container(
+            margin: EdgeInsets.symmetric(
+              horizontal: 8,
+              vertical: 2,
+            ),
+            decoration: BoxDecoration(
+              color: isSelected
+                  ? AppColors.primary.withValues(alpha: 0.1)
+                  : Colors.transparent,
+              borderRadius: BorderRadius.circular(8),
+            ),
+            child: ListTile(
+              leading: Icon(
+                item.icon,
+                color: isSelected ? AppColors.primary : AppColors.grey600,
+              ),
+              title: Text(
+                item.title,
+                style: TextStyle(
+                  color: isSelected
+                      ? AppColors.primary
+                      : AppColors.textPrimary,
+                  fontWeight:
+                      isSelected ? FontWeight.w600 : FontWeight.normal,
+                ),
+              ),
+              onTap: () {
+                Get.toNamed(item.route);
+                // Close drawer on mobile/tablet
+                if (Responsive.isMobile(context) || Responsive.isTablet(context)) {
+                  Navigator.of(context).pop();
+                }
+              },
+            ),
+          );
+        },
+      );
+    }
   }
 }
