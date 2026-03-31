@@ -186,56 +186,90 @@ class DashboardScreen extends StatelessWidget {
 
   Widget _buildRecentTransactions(
       BuildContext context, DashboardController controller) {
-    return Card(
-      elevation: 1,
-      color: Colors.white,
-      shape: RoundedRectangleBorder(
+    return Container(
+      decoration: BoxDecoration(
+        color: Colors.white,
         borderRadius: BorderRadius.circular(16),
-        side: BorderSide(color: AppColors.grey200),
+        // "Ghost Border" - 10% opacity border for subtle definition
+        border: Border.all(color: const Color(0xFFACB3B7).withOpacity(0.1)),
+        boxShadow: [
+          BoxShadow(
+            color: const Color(0xFF2C3437).withOpacity(0.02),
+            blurRadius: 10,
+            offset: const Offset(0, 4),
+          ),
+        ],
       ),
-      child: Padding(
-        padding: EdgeInsets.all(AppConstants.defaultPadding),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          // Section Header
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 20),
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                Container(
-                  padding: EdgeInsets.all(8),
-                  decoration: BoxDecoration(
-                    color: Colors.white,
-                    borderRadius: BorderRadius.circular(10),
-                    border: Border.all(color: AppColors.grey200),
-                  ),
-                  child: Icon(
-                    Icons.history,
-                    color: AppColors.primary,
-                    size: 20,
-                  ),
-                ),
-                SizedBox(width: 12),
-                Text(
+                const Text(
                   'Recent Transactions',
-                  style: Theme.of(context).textTheme.headlineSmall?.copyWith(
+                  style: TextStyle(
+                    fontSize: 18,
                     fontWeight: FontWeight.bold,
-                    color: AppColors.textPrimary,
+                    color: Color(0xFF2C3437),
+                    letterSpacing: -0.5,
                   ),
                 ),
-                Spacer(),
-                TextButton.icon(
-                  onPressed: () => Get.toNamed('/transactions'),
-                  icon: Icon(Icons.arrow_forward, size: 16),
-                  label: Text('View All'),
-                  style: TextButton.styleFrom(
-                    foregroundColor: AppColors.primary,
-                  ),
+                Row(
+                  children: [
+                    _TransactionIconButton(icon: Icons.filter_list),
+                    const SizedBox(width: 8),
+                    _TransactionIconButton(
+                      icon: Icons.download,
+                      onTap: () {
+                        // TODO: Implement download functionality
+                      },
+                    ),
+                  ],
                 ),
               ],
             ),
-            SizedBox(height: 16),
-            _buildTransactionsList(controller.recentTransactions),
-          ],
-        ),
+          ),
+          
+          // Data Table
+          _buildTransactionsList(controller.recentTransactions),
+          
+          // Pagination Footer
+          if (controller.recentTransactions.isNotEmpty)
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Text(
+                    'Showing 1-${controller.recentTransactions.length} of ${controller.totalTransactions.value} transactions',
+                    style: const TextStyle(
+                      fontSize: 11,
+                      fontWeight: FontWeight.bold,
+                      color: Color(0xFF596064),
+                      letterSpacing: 0.5,
+                    ),
+                  ),
+                  Row(
+                    children: [
+                      _TransactionPageButton(icon: Icons.chevron_left, isEnabled: false),
+                      const SizedBox(width: 8),
+                      _TransactionPageButton(text: '1', isActive: true),
+                      const SizedBox(width: 8),
+                      _TransactionPageButton(text: '2'),
+                      const SizedBox(width: 8),
+                      _TransactionPageButton(text: '3'),
+                      const SizedBox(width: 8),
+                      _TransactionPageButton(icon: Icons.chevron_right),
+                    ],
+                  ),
+                ],
+              ),
+            ),
+        ],
       ),
     );
   }
@@ -243,11 +277,11 @@ class DashboardScreen extends StatelessWidget {
   Widget _buildTransactionsList(List<Transaction> transactions) {
     if (transactions.isEmpty) {
       return Container(
-        padding: EdgeInsets.all(32),
+        padding: const EdgeInsets.all(32),
         alignment: Alignment.center,
-        child: Text(
+        child: const Text(
           'No transactions found',
-          style: TextStyle(color: AppColors.grey600),
+          style: TextStyle(color: Color(0xFF596064)),
         ),
       );
     }
@@ -259,7 +293,7 @@ class DashboardScreen extends StatelessWidget {
         if (isMobile) {
           return ListView.builder(
             shrinkWrap: true,
-            physics: NeverScrollableScrollPhysics(),
+            physics: const NeverScrollableScrollPhysics(),
             itemCount: transactions.length,
             itemBuilder: (context, index) {
               return _buildTransactionCard(transactions[index]);
@@ -270,26 +304,23 @@ class DashboardScreen extends StatelessWidget {
         return SingleChildScrollView(
           scrollDirection: Axis.horizontal,
           child: DataTable(
-            columns: [
-              DataColumn(label: Text('Transaction ID')),
-              DataColumn(label: Text('Type')),
-              DataColumn(label: Text('Status')),
-              DataColumn(label: Text('Grams')),
-              DataColumn(label: Text('Amount')),
-              DataColumn(label: Text('Date')),
+            headingRowHeight: 48,
+            dataRowHeight: 64,
+            horizontalMargin: 24,
+            columnSpacing: 32,
+            // Tonal background for header
+            headingRowColor: MaterialStateProperty.all(
+              const Color(0xFFF0F4F7).withOpacity(0.3)
+            ),
+            columns: const [
+              DataColumn(label: _TransactionColumnHeader('TRANSACTION ID')),
+              DataColumn(label: _TransactionColumnHeader('TYPE')),
+              DataColumn(label: _TransactionColumnHeader('STATUS')),
+              DataColumn(label: _TransactionColumnHeader('GRAMS')),
+              DataColumn(label: _TransactionColumnHeader('AMOUNT')),
+              DataColumn(label: _TransactionColumnHeader('DATE')),
             ],
-            rows: transactions.map((tx) {
-              return DataRow(
-                cells: [
-                  DataCell(Text(tx.id.substring(0, 8) + '...')),
-                  DataCell(_buildTypeChip(tx.type)),
-                  DataCell(_buildStatusChip(tx.status)),
-                  DataCell(Text(Formatters.formatGrams(tx.grams))),
-                  DataCell(Text(Formatters.formatCurrency(tx.amountBdt))),
-                  DataCell(Text(Formatters.formatDate(tx.createdAt))),
-                ],
-              );
-            }).toList(),
+            rows: transactions.map((tx) => _buildDataRow(tx)).toList(),
           ),
         );
       },
@@ -298,7 +329,7 @@ class DashboardScreen extends StatelessWidget {
 
   Widget _buildTransactionCard(Transaction tx) {
     return Card(
-      margin: EdgeInsets.only(bottom: 8),
+      margin: const EdgeInsets.only(bottom: 8),
       child: ListTile(
         leading: CircleAvatar(
           backgroundColor: _getTypeColor(tx.type).withValues(alpha: 0.1),
@@ -311,10 +342,10 @@ class DashboardScreen extends StatelessWidget {
           crossAxisAlignment: CrossAxisAlignment.end,
           children: [
             _buildStatusChip(tx.status),
-            SizedBox(height: 4),
+            const SizedBox(height: 4),
             Text(
               Formatters.formatCurrency(tx.amountBdt),
-              style: TextStyle(
+              style: const TextStyle(
                 fontWeight: FontWeight.bold,
                 fontSize: 12,
               ),
@@ -325,99 +356,226 @@ class DashboardScreen extends StatelessWidget {
     );
   }
 
-  Widget _buildStatusChip(String status) {
-    Color color;
-    IconData icon;
-    final statusUpper = status.toUpperCase();
-
-    switch (statusUpper) {
-      case 'PENDING':
-        color = AppColors.statusPending;
-        icon = Icons.pending;
-        break;
-      case 'APPROVED':
-        color = AppColors.statusApproved;
-        icon = Icons.check_circle;
-        break;
-      case 'PAID':
-        color = AppColors.statusPaid;
-        icon = Icons.payment;
-        break;
-      case 'REJECTED':
-        color = AppColors.statusRejected;
-        icon = Icons.cancel;
-        break;
-      default:
-        color = AppColors.grey600;
-        icon = Icons.help;
-    }
-
-    return Container(
-      padding: EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: color),
-      ),
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Icon(icon, size: 12, color: color),
-          SizedBox(width: 4),
-          Text(
-            statusUpper,
-            style: TextStyle(
-              color: color,
+  DataRow _buildDataRow(Transaction tx) {
+    final String displayId = tx.id.length > 10 
+        ? '#${tx.id.substring(0, 9)}...' 
+        : '#${tx.id}';
+    
+    return DataRow(
+      cells: [
+        DataCell(Text(
+          displayId,
+          style: const TextStyle(
+            color: Color(0xFF3856C4),
+            fontWeight: FontWeight.w600,
+            fontFamily: 'monospace',
+            fontSize: 13,
+          ),
+        )),
+        DataCell(Row(
+          children: [
+            Container(
+              padding: const EdgeInsets.all(6),
+              decoration: BoxDecoration(
+                color: _getTypeColor(tx.type).withOpacity(0.05),
+                borderRadius: BorderRadius.circular(8),
+              ),
+              child: Icon(
+                _getTypeIcon(tx.type), 
+                size: 16, 
+                color: _getTypeColor(tx.type),
+              ),
+            ),
+            const SizedBox(width: 12),
+            Text(
+              Formatters.formatTransactionType(tx.type),
+              style: const TextStyle(
+                fontSize: 14,
+                fontWeight: FontWeight.w500,
+                color: Color(0xFF2C3437),
+              ),
+            ),
+          ],
+        )),
+        DataCell(_buildStatusChip(tx.status)),
+        DataCell(Align(
+          alignment: Alignment.centerRight,
+          child: Text(
+            Formatters.formatGrams(tx.grams),
+            style: const TextStyle(
+              fontSize: 14,
+              fontWeight: FontWeight.bold,
+              color: Color(0xFF2C3437),
+            ),
+          ),
+        )),
+        DataCell(Align(
+          alignment: Alignment.centerRight,
+          child: Text(
+            Formatters.formatCurrency(tx.amountBdt),
+            style: const TextStyle(
+              fontSize: 14,
+              fontWeight: FontWeight.w900,
+              color: Color(0xFF2C3437),
+            ),
+          ),
+        )),
+        DataCell(Align(
+          alignment: Alignment.centerRight,
+          child: Text(
+            Formatters.formatDate(tx.createdAt),
+            style: const TextStyle(
               fontSize: 11,
-              fontWeight: FontWeight.w600,
+              fontWeight: FontWeight.bold,
+              color: Color(0xFF596064),
               letterSpacing: 0.5,
             ),
           ),
-        ],
-      ),
+        )),
+      ],
     );
   }
 
-  Widget _buildTypeChip(String type) {
-    final color = _getTypeColor(type);
-    final icon = _getTypeIcon(type);
+  Widget _buildStatusChip(String status) {
+    Color bgColor;
+    Color textColor;
+    final statusUpper = status.toUpperCase();
+
+    switch (statusUpper) {
+      case 'APPROVED':
+        bgColor = const Color(0xFF91FEEF);
+        textColor = const Color(0xFF006D64);
+        break;
+      case 'PENDING':
+        bgColor = const Color(0xFFD3E4FE);
+        textColor = const Color(0xFF314055);
+        break;
+      case 'REJECTED':
+        bgColor = const Color(0xFFFA746F).withOpacity(0.2);
+        textColor = const Color(0xFFA83836);
+        break;
+      case 'PAID':
+        bgColor = const Color(0xFF91FEEF);
+        textColor = const Color(0xFF006D64);
+        break;
+      default:
+        bgColor = Colors.grey.shade200;
+        textColor = Colors.grey;
+    }
 
     return Container(
-      padding: EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: bgColor,
         borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: color),
       ),
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Icon(icon, size: 12, color: color),
-          SizedBox(width: 4),
-          Text(
-            type.replaceAll('_', ' '),
-            style: TextStyle(
-              color: color,
-              fontSize: 11,
-              fontWeight: FontWeight.w600,
-            ),
-          ),
-        ],
+      child: Text(
+        statusUpper,
+        style: TextStyle(
+          color: textColor,
+          fontSize: 9,
+          fontWeight: FontWeight.bold,
+          letterSpacing: 1.0,
+        ),
       ),
     );
   }
 
   Color _getTypeColor(String type) {
-    if (type.contains('BUY')) return AppColors.success;
-    if (type.contains('SELL')) return AppColors.error;
-    if (type.contains('EXCHANGE')) return AppColors.info;
-    return AppColors.grey600;
+    if (type.contains('BUY')) return const Color(0xFF3856C4);
+    if (type.contains('SELL')) return const Color(0xFF506076);
+    if (type.contains('EXCHANGE')) return const Color(0xFFA83836);
+    return const Color(0xFF506076);
   }
 
   IconData _getTypeIcon(String type) {
     if (type.contains('BUY')) return Icons.shopping_cart;
-    if (type.contains('SELL')) return Icons.sell;
-    if (type.contains('EXCHANGE')) return Icons.swap_horiz;
+    if (type.contains('SELL')) return Icons.payments;
+    if (type.contains('EXCHANGE')) return Icons.error_outline;
     return Icons.receipt;
+  }
+}
+
+// Helper Widgets for Transaction Table
+
+class _TransactionColumnHeader extends StatelessWidget {
+  final String title;
+  const _TransactionColumnHeader(this.title);
+
+  @override
+  Widget build(BuildContext context) {
+    return Text(
+      title,
+      style: const TextStyle(
+        fontSize: 10,
+        fontWeight: FontWeight.bold,
+        color: Color(0xFF596064),
+        letterSpacing: 2.0,
+      ),
+    );
+  }
+}
+
+class _TransactionIconButton extends StatelessWidget {
+  final IconData icon;
+  final VoidCallback? onTap;
+  const _TransactionIconButton({required this.icon, this.onTap});
+
+  @override
+  Widget build(BuildContext context) {
+    return InkWell(
+      onTap: onTap ?? () {},
+      borderRadius: BorderRadius.circular(8),
+      child: Container(
+        padding: const EdgeInsets.all(8),
+        child: Icon(icon, size: 18, color: const Color(0xFF596064)),
+      ),
+    );
+  }
+}
+
+class _TransactionPageButton extends StatelessWidget {
+  final String? text;
+  final IconData? icon;
+  final bool isActive;
+  final bool isEnabled;
+
+  const _TransactionPageButton({
+    this.text,
+    this.icon,
+    this.isActive = false,
+    this.isEnabled = true,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      width: 32,
+      height: 32,
+      decoration: BoxDecoration(
+        color: isActive ? Colors.white : Colors.transparent,
+        borderRadius: BorderRadius.circular(8),
+        border: Border.all(color: const Color(0xFFACB3B7).withOpacity(0.1)),
+        boxShadow: isActive ? [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.05),
+            blurRadius: 4,
+            offset: const Offset(0, 2),
+          )
+        ] : null,
+      ),
+      child: Center(
+        child: icon != null
+            ? Icon(icon, size: 16, color: isEnabled ? const Color(0xFF596064) : const Color(0xFFACB3B7))
+            : Text(
+                text!,
+                style: TextStyle(
+                  fontSize: 10,
+                  fontWeight: isActive ? FontWeight.black : FontWeight.bold,
+                  color: isActive ? const Color(0xFF3856C4) : const Color(0xFF2C3437),
+                ),
+              ),
+      ),
+    );
   }
 }
