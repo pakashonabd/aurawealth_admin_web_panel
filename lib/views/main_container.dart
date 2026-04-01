@@ -12,7 +12,7 @@ import '../core/constants/app_colors.dart';
 import '../core/utils/responsive.dart';
 import '../routes/app_routes.dart';
 import '../widgets/layout/sidebar_menu.dart';
-import 'dashboard/dashboard_screen.dart';
+import 'dashboard/modern_dashboard_screen.dart';
 import 'transactions/transactions_screen.dart';
 import 'users/users_screen.dart';
 import 'gold_management/gold_management_screen.dart';
@@ -195,7 +195,7 @@ class MainContainer extends StatelessWidget {
         if (!Get.isRegistered<DashboardController>()) {
           Get.lazyPut<DashboardController>(() => DashboardController());
         }
-        return DashboardScreen();
+        return ModernDashboardScreen();
 
       case AppRoutes.transactions:
         if (!Get.isRegistered<TransactionController>()) {
@@ -231,7 +231,7 @@ class MainContainer extends StatelessWidget {
         if (!Get.isRegistered<DashboardController>()) {
           Get.lazyPut<DashboardController>(() => DashboardController());
         }
-        return DashboardScreen();
+        return ModernDashboardScreen();
     }
   }
 }

@@ -4,8 +4,10 @@ class AppColors {
   // Primary Colors (as per requirements)
   static const Color primary = Color(0xFF2196F3); // Professional Sky Blue
   static const Color background = Colors.white;
+  static const Color surface = Color(0xFFFAFAFA); // Light surface color
   static const Color textPrimary = Colors.black;
-  
+  static const Color textSecondary = Color(0xFF666666);
+
   // Contextual Colors (for icons and status indicators)
   static const Color success = Color(0xFF4CAF50);
   static const Color error = Color(0xFFF44336);
@@ -17,7 +19,9 @@ class AppColors {
   static const Color grey200 = Color(0xFFEEEEEE);
   static const Color grey300 = Color(0xFFE0E0E0);
   static const Color grey400 = Color(0xFFBDBDBD);
+  static const Color grey500 = Color(0xFF9E9E9E);
   static const Color grey600 = Color(0xFF757575);
+  static const Color grey700 = Color(0xFF616161);
   static const Color grey800 = Color(0xFF424242);
   
   // Status Colors

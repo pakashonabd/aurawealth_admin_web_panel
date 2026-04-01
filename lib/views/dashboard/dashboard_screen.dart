@@ -1,581 +1,333 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
-import '../../controllers/dashboard_controller.dart';
+import 'package:fl_chart/fl_chart.dart';
+import '../../controllers/gold_controller.dart';
 import '../../core/constants/app_colors.dart';
 import '../../core/constants/app_constants.dart';
 import '../../core/utils/responsive.dart';
 import '../../core/utils/formatters.dart';
-import '../../widgets/common/stats_card.dart';
 import '../../widgets/common/loading_widget.dart';
 import '../../widgets/common/error_widget.dart' as custom_error;
-import '../../models/transaction.dart';
+import '../../widgets/common/modern_stat_card.dart';
+import '../../widgets/common/modern_card.dart';
+import '../../widgets/common/chart_card.dart';
+import '../../widgets/common/info_box.dart';
+import '../../widgets/common/chart_helpers.dart';
 
-class DashboardScreen extends StatelessWidget {
-  const DashboardScreen({Key? key}) : super(key: key);
+class GoldManagementScreen extends StatelessWidget {
+  const GoldManagementScreen({Key? key}) : super(key: key);
 
   @override
   Widget build(BuildContext context) {
-    final controller = Get.find<DashboardController>();
+    final controller = Get.find<GoldController>();
 
     return Obx(() {
-      if (controller.isLoading.value) {
-        return LoadingWidget(message: 'Loading dashboard...');
+      if (controller.isLoading.value && controller.currentPrice.value == null) {
+        return LoadingWidget(message: 'Loading gold prices...');
       }
 
-      if (controller.errorMessage.value.isNotEmpty) {
+      if (controller.errorMessage.value.isNotEmpty && controller.currentPrice.value == null) {
         return custom_error.CustomErrorWidget(
           message: controller.errorMessage.value,
           onRetry: controller.refresh,
         );
       }
 
-      return RefreshIndicator(
-        onRefresh: () async => controller.refresh(),
-        child: SingleChildScrollView(
-          padding: EdgeInsets.all(AppConstants.defaultPadding),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              // Stats Grid
-              _buildStatsGrid(context, controller),
-              SizedBox(height: 24),
+      final compactPadding = AppConstants.defaultPadding * 0.5; // Even tighter padding
 
-              // Pending Transactions
-              _buildPendingTransactions(context, controller),
-              SizedBox(height: 24),
+      return SingleChildScrollView(
+        padding: EdgeInsets.all(compactPadding),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            // Header
+            Row(
+              children: [
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        'Gold Management',
+                        style: TextStyle(
+                          fontSize: 16, // Smaller
+                          fontWeight: FontWeight.bold,
+                          color: AppColors.textPrimary,
+                        ),
+                      ),
+                      Text(
+                        'Monitor and update gold prices',
+                        style: TextStyle(
+                          fontSize: 10, // Smaller
+                          color: AppColors.grey600,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                IconButton(
+                  padding: EdgeInsets.zero,
+                  constraints: BoxConstraints(),
+                  iconSize: 16,
+                  icon: Icon(Icons.refresh_rounded, color: AppColors.primary),
+                  onPressed: controller.refresh,
+                ),
+              ],
+            ),
+            SizedBox(height: 8),
 
-              // Recent Transactions
-              _buildRecentTransactions(context, controller),
-            ],
-          ),
+            _buildMainPriceCard(controller),
+            SizedBox(height: 8),
+
+            // Ultra-compact Stat Cards (3 columns)
+            _buildPriceStatsSection(controller),
+            SizedBox(height: 8),
+
+            // Ultra-compact Charts (Reduced height to 130-140)
+            _buildChartsSection(controller),
+            SizedBox(height: 8),
+
+            _buildUpdatePriceCard(context, controller),
+            SizedBox(height: 8),
+
+            // Ultra-compact Trading Info (The 4 cards)
+            _buildFeeStructure(),
+          ],
         ),
       );
     });
   }
 
-  Widget _buildStatsGrid(BuildContext context, DashboardController controller) {
-    final columns = Responsive.getGridColumnCount(context, maxColumns: 4);
+  Widget _buildMainPriceCard(GoldController controller) {
+    final price = controller.currentPrice.value;
+    if (price == null) return SizedBox.shrink();
 
-    return LayoutBuilder(
-      builder: (context, constraints) {
-        return GridView.count(
-          crossAxisCount: columns,
-          shrinkWrap: true,
-          physics: NeverScrollableScrollPhysics(),
-          childAspectRatio: 1.5,
-          mainAxisSpacing: 16,
-          crossAxisSpacing: 16,
-          children: [
-            StatsCard(
-              title: 'Total Transactions',
-              value: controller.totalTransactions.value.toString(),
-              icon: Icons.receipt_long,
-              iconColor: AppColors.primary,
-            ),
-            StatsCard(
-              title: 'Pending',
-              value: controller.totalPendingTransactions.value.toString(),
-              icon: Icons.pending_actions,
-              iconColor: AppColors.warning,
-            ),
-            StatsCard(
-              title: 'Total Gold Holdings',
-              value: Formatters.formatGrams(controller.totalGoldHoldings.value),
-              icon: Icons.diamond,
-              iconColor: Color(0xFFFFD700),
-            ),
-            StatsCard(
-              title: 'Total Revenue',
-              value: Formatters.formatCurrency(controller.totalRevenue.value),
-              icon: Icons.monetization_on,
-              iconColor: AppColors.success,
-            ),
-            StatsCard(
-              title: 'Buy Transactions',
-              value: controller.totalBuyTransactions.value.toString(),
-              icon: Icons.shopping_cart,
-              iconColor: AppColors.success,
-            ),
-            StatsCard(
-              title: 'Sell Transactions',
-              value: controller.totalSellTransactions.value.toString(),
-              icon: Icons.sell,
-              iconColor: AppColors.error,
-            ),
-            StatsCard(
-              title: 'Exchange Transactions',
-              value: controller.totalExchangeTransactions.value.toString(),
-              icon: Icons.swap_horiz,
-              iconColor: AppColors.info,
-            ),
-            StatsCard(
-              title: 'Gold Type',
-              value: AppConstants.goldType,
-              icon: Icons.star,
-              iconColor: Color(0xFFFFD700),
-            ),
-          ],
-        );
-      },
-    );
-  }
-
-  Widget _buildPendingTransactions(
-      BuildContext context, DashboardController controller) {
-    return Card(
-      elevation: 1,
-      color: Colors.white,
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(16),
-        side: BorderSide(color: AppColors.grey200),
-      ),
-      child: Padding(
-        padding: EdgeInsets.all(AppConstants.defaultPadding),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(
-              children: [
-                Container(
-                  padding: EdgeInsets.all(8),
-                  decoration: BoxDecoration(
-                    color: Colors.white,
-                    borderRadius: BorderRadius.circular(10),
-                    border: Border.all(color: AppColors.grey200),
-                  ),
-                  child: Icon(
-                    Icons.pending_actions,
-                    color: AppColors.warning,
-                    size: 20,
-                  ),
+    return ModernCard(
+      padding: EdgeInsets.all(8),
+      color: AppColors.surface,
+      child: Column(
+        children: [
+          Row(
+            children: [
+              Icon(Icons.diamond_outlined, color: AppColors.primary, size: 16),
+              SizedBox(width: 6),
+              Expanded(
+                child: Text(
+                  'Current Market Price (${AppConstants.goldType})',
+                  style: TextStyle(fontSize: 10, color: AppColors.grey700, fontWeight: FontWeight.w600),
                 ),
-                SizedBox(width: 12),
-                Text(
-                  'Pending Transactions',
-                  style: Theme.of(context).textTheme.headlineSmall?.copyWith(
-                    fontWeight: FontWeight.bold,
-                    color: AppColors.textPrimary,
-                  ),
-                ),
-                Spacer(),
-                Container(
-                  padding: EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-                  decoration: BoxDecoration(
-                    color: Colors.white,
-                    borderRadius: BorderRadius.circular(20),
-                    border: Border.all(color: AppColors.grey200),
-                  ),
-                  child: Text(
-                    '${controller.pendingTransactions.length}',
-                    style: TextStyle(
-                      color: AppColors.textPrimary,
-                      fontSize: 13,
-                      fontWeight: FontWeight.bold,
-                    ),
-                  ),
-                ),
-              ],
-            ),
-            SizedBox(height: 20),
-            _buildTransactionsList(controller.pendingTransactions),
-          ],
-        ),
+              ),
+              Text(
+                Formatters.formatRelativeTime(price.createdAt),
+                style: TextStyle(fontSize: 8, color: AppColors.grey500),
+              ),
+            ],
+          ),
+          SizedBox(height: 4),
+          Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            crossAxisAlignment: CrossAxisAlignment.baseline,
+            textBaseline: TextBaseline.alphabetic,
+            children: [
+              Text(
+                Formatters.formatCurrency(price.price),
+                style: TextStyle(fontSize: 22, fontWeight: FontWeight.w900, color: AppColors.textPrimary),
+              ),
+              SizedBox(width: 4),
+              Text('per gram', style: TextStyle(fontSize: 10, color: AppColors.textSecondary)),
+            ],
+          ),
+        ],
       ),
     );
   }
 
-  Widget _buildRecentTransactions(
-      BuildContext context, DashboardController controller) {
+  Widget _buildPriceStatsSection(GoldController controller) {
+    final price = controller.currentPrice.value;
+    if (price == null) return SizedBox.shrink();
+
+    return SizedBox(
+      height: 80,
+      child: GridView.count(
+        shrinkWrap: true,
+        physics: NeverScrollableScrollPhysics(),
+        crossAxisCount: 3,
+        crossAxisSpacing: 6,
+        mainAxisSpacing: 6,
+        childAspectRatio: 1.5, // Reduced from 2.0
+        children: [
+          _buildCompactStat('Bank Sell', price.bankSellPrice, AppColors.success, '${AppConstants.bankSellFeePercent}%'),
+          _buildCompactStat('Store Sell', price.storeSellPrice, AppColors.error, '${AppConstants.storeSellFeePercent}%'),
+          _buildCompactStat('Exchange', price.exchangePrice, Color(0xFF9C27B0), '${AppConstants.exchangeFeePercent}%'),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildCompactStat(String title, double value, Color color, String fee) {
     return Container(
+      padding: EdgeInsets.symmetric(horizontal: 6, vertical: 4),
       decoration: BoxDecoration(
         color: Colors.white,
-        borderRadius: BorderRadius.circular(16),
-        // "Ghost Border" - 10% opacity border for subtle definition
-        border: Border.all(color: const Color(0xFFACB3B7).withOpacity(0.1)),
-        boxShadow: [
-          BoxShadow(
-            color: const Color(0xFF2C3437).withOpacity(0.02),
-            blurRadius: 10,
-            offset: const Offset(0, 4),
-          ),
-        ],
+        borderRadius: BorderRadius.circular(8),
+        border: Border.all(color: AppColors.grey200),
       ),
       child: Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
+        mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          // Section Header
-          Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 20),
-            child: Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                const Text(
-                  'Recent Transactions',
-                  style: TextStyle(
-                    fontSize: 18,
-                    fontWeight: FontWeight.bold,
-                    color: Color(0xFF2C3437),
-                    letterSpacing: -0.5,
-                  ),
-                ),
-                Row(
-                  children: [
-                    _TransactionIconButton(icon: Icons.filter_list),
-                    const SizedBox(width: 8),
-                    _TransactionIconButton(
-                      icon: Icons.download,
-                      onTap: () {
-                        // TODO: Implement download functionality
-                      },
-                    ),
-                  ],
-                ),
-              ],
-            ),
-          ),
-          
-          // Data Table
-          _buildTransactionsList(controller.recentTransactions),
-          
-          // Pagination Footer
-          if (controller.recentTransactions.isNotEmpty)
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  Text(
-                    'Showing 1-${controller.recentTransactions.length} of ${controller.totalTransactions.value} transactions',
-                    style: const TextStyle(
-                      fontSize: 11,
-                      fontWeight: FontWeight.bold,
-                      color: Color(0xFF596064),
-                      letterSpacing: 0.5,
-                    ),
-                  ),
-                  Row(
-                    children: [
-                      _TransactionPageButton(icon: Icons.chevron_left, isEnabled: false),
-                      const SizedBox(width: 8),
-                      _TransactionPageButton(text: '1', isActive: true),
-                      const SizedBox(width: 8),
-                      _TransactionPageButton(text: '2'),
-                      const SizedBox(width: 8),
-                      _TransactionPageButton(text: '3'),
-                      const SizedBox(width: 8),
-                      _TransactionPageButton(icon: Icons.chevron_right),
-                    ],
-                  ),
-                ],
-              ),
-            ),
+          Text(title, style: TextStyle(fontSize: 8, fontWeight: FontWeight.bold, color: AppColors.grey600)),
+          Text(Formatters.formatCurrency(value), style: TextStyle(fontSize: 11, fontWeight: FontWeight.w900, color: AppColors.textPrimary)),
+          Text(fee, style: TextStyle(fontSize: 8, fontWeight: FontWeight.bold, color: color)),
         ],
       ),
     );
   }
 
-  Widget _buildTransactionsList(List<Transaction> transactions) {
-    if (transactions.isEmpty) {
-      return Container(
-        padding: const EdgeInsets.all(32),
-        alignment: Alignment.center,
-        child: const Text(
-          'No transactions found',
-          style: TextStyle(color: Color(0xFF596064)),
-        ),
-      );
-    }
+  Widget _buildChartsSection(GoldController controller) {
+    final price = controller.currentPrice.value;
+    if (price == null) return SizedBox.shrink();
 
-    return LayoutBuilder(
-      builder: (context, constraints) {
-        final isMobile = constraints.maxWidth < AppConstants.mobileBreakpoint;
-
-        if (isMobile) {
-          return ListView.builder(
-            shrinkWrap: true,
-            physics: const NeverScrollableScrollPhysics(),
-            itemCount: transactions.length,
-            itemBuilder: (context, index) {
-              return _buildTransactionCard(transactions[index]);
-            },
-          );
-        }
-
-        return SingleChildScrollView(
-          scrollDirection: Axis.horizontal,
-          child: DataTable(
-            headingRowHeight: 48,
-            dataRowHeight: 64,
-            horizontalMargin: 24,
-            columnSpacing: 32,
-            // Tonal background for header
-            headingRowColor: MaterialStateProperty.all(
-              const Color(0xFFF0F4F7).withOpacity(0.3)
-            ),
-            columns: const [
-              DataColumn(label: _TransactionColumnHeader('TRANSACTION ID')),
-              DataColumn(label: _TransactionColumnHeader('TYPE')),
-              DataColumn(label: _TransactionColumnHeader('STATUS')),
-              DataColumn(label: _TransactionColumnHeader('GRAMS')),
-              DataColumn(label: _TransactionColumnHeader('AMOUNT')),
-              DataColumn(label: _TransactionColumnHeader('DATE')),
-            ],
-            rows: transactions.map((tx) => _buildDataRow(tx)).toList(),
-          ),
-        );
-      },
-    );
-  }
-
-  Widget _buildTransactionCard(Transaction tx) {
-    return Card(
-      margin: const EdgeInsets.only(bottom: 8),
-      child: ListTile(
-        leading: CircleAvatar(
-          backgroundColor: _getTypeColor(tx.type).withValues(alpha: 0.1),
-          child: Icon(_getTypeIcon(tx.type), color: _getTypeColor(tx.type)),
-        ),
-        title: Text(Formatters.formatTransactionType(tx.type)),
-        subtitle: Text('${Formatters.formatGrams(tx.grams)} • ${Formatters.formatDate(tx.createdAt)}'),
-        trailing: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          crossAxisAlignment: CrossAxisAlignment.end,
-          children: [
-            _buildStatusChip(tx.status),
-            const SizedBox(height: 4),
-            Text(
-              Formatters.formatCurrency(tx.amountBdt),
-              style: const TextStyle(
-                fontWeight: FontWeight.bold,
-                fontSize: 12,
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  DataRow _buildDataRow(Transaction tx) {
-    final String displayId = tx.id.length > 10 
-        ? '#${tx.id.substring(0, 9)}...' 
-        : '#${tx.id}';
-    
-    return DataRow(
-      cells: [
-        DataCell(Text(
-          displayId,
-          style: const TextStyle(
-            color: Color(0xFF3856C4),
-            fontWeight: FontWeight.w600,
-            fontFamily: 'monospace',
-            fontSize: 13,
-          ),
-        )),
-        DataCell(Row(
-          children: [
-            Container(
-              padding: const EdgeInsets.all(6),
-              decoration: BoxDecoration(
-                color: _getTypeColor(tx.type).withOpacity(0.05),
-                borderRadius: BorderRadius.circular(8),
-              ),
-              child: Icon(
-                _getTypeIcon(tx.type), 
-                size: 16, 
-                color: _getTypeColor(tx.type),
-              ),
-            ),
-            const SizedBox(width: 12),
-            Text(
-              Formatters.formatTransactionType(tx.type),
-              style: const TextStyle(
-                fontSize: 14,
-                fontWeight: FontWeight.w500,
-                color: Color(0xFF2C3437),
-              ),
-            ),
-          ],
-        )),
-        DataCell(_buildStatusChip(tx.status)),
-        DataCell(Align(
-          alignment: Alignment.centerRight,
-          child: Text(
-            Formatters.formatGrams(tx.grams),
-            style: const TextStyle(
-              fontSize: 14,
-              fontWeight: FontWeight.bold,
-              color: Color(0xFF2C3437),
-            ),
-          ),
-        )),
-        DataCell(Align(
-          alignment: Alignment.centerRight,
-          child: Text(
-            Formatters.formatCurrency(tx.amountBdt),
-            style: const TextStyle(
-              fontSize: 14,
-              fontWeight: FontWeight.w900,
-              color: Color(0xFF2C3437),
-            ),
-          ),
-        )),
-        DataCell(Align(
-          alignment: Alignment.centerRight,
-          child: Text(
-            Formatters.formatDate(tx.createdAt),
-            style: const TextStyle(
-              fontSize: 11,
-              fontWeight: FontWeight.bold,
-              color: Color(0xFF596064),
-              letterSpacing: 0.5,
-            ),
-          ),
-        )),
+    return Row(
+      children: [
+        Expanded(child: _buildPriceComparisonChart(price, height: 100)),
+        SizedBox(width: 8),
+        Expanded(child: _buildFeeBreakdownChart(height: 100)),
       ],
     );
   }
 
-  Widget _buildStatusChip(String status) {
-    Color bgColor;
-    Color textColor;
-    final statusUpper = status.toUpperCase();
+  Widget _buildPriceComparisonChart(dynamic price, {double height = 130}) {
+    final data = [
+      _BarData(0, 'Mkt', price.price, AppColors.primary),
+      _BarData(1, 'Bnk', price.bankSellPrice, AppColors.success),
+      _BarData(2, 'Str', price.storeSellPrice, AppColors.error),
+      _BarData(3, 'Exc', price.exchangePrice, Color(0xFF9C27B0)),
+    ];
 
-    switch (statusUpper) {
-      case 'APPROVED':
-        bgColor = const Color(0xFF91FEEF);
-        textColor = const Color(0xFF006D64);
-        break;
-      case 'PENDING':
-        bgColor = const Color(0xFFD3E4FE);
-        textColor = const Color(0xFF314055);
-        break;
-      case 'REJECTED':
-        bgColor = const Color(0xFFFA746F).withOpacity(0.2);
-        textColor = const Color(0xFFA83836);
-        break;
-      case 'PAID':
-        bgColor = const Color(0xFF91FEEF);
-        textColor = const Color(0xFF006D64);
-        break;
-      default:
-        bgColor = Colors.grey.shade200;
-        textColor = Colors.grey;
-    }
-
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
-      decoration: BoxDecoration(
-        color: bgColor,
-        borderRadius: BorderRadius.circular(20),
-      ),
-      child: Text(
-        statusUpper,
-        style: TextStyle(
-          color: textColor,
-          fontSize: 9,
-          fontWeight: FontWeight.bold,
-          letterSpacing: 1.0,
+    return ChartCard(
+      title: 'Comparison',
+      padding: EdgeInsets.all(6),
+      chart: BarChart(
+        BarChartData(
+          alignment: BarChartAlignment.spaceAround,
+          maxY: price.price * 1.1,
+          barTouchData: BarTouchData(enabled: false),
+          titlesData: FlTitlesData(
+            show: true,
+            bottomTitles: AxisTitles(sideTitles: SideTitles(showTitles: true, getTitlesWidget: (v, m) => Text(data[v.toInt()].label, style: TextStyle(fontSize: 7)))),
+            leftTitles: AxisTitles(sideTitles: SideTitles(showTitles: true, reservedSize: 25, getTitlesWidget: (v, m) => Text('${(v / 1000).toStringAsFixed(0)}k', style: TextStyle(fontSize: 6)))),
+            rightTitles: AxisTitles(sideTitles: SideTitles(showTitles: false)),
+            topTitles: AxisTitles(sideTitles: SideTitles(showTitles: false)),
+          ),
+          gridData: FlGridData(show: false),
+          borderData: FlBorderData(show: false),
+          barGroups: data.map((d) => BarChartGroupData(x: d.x, barRods: [BarChartRodData(toY: d.value, color: d.color, width: 12, borderRadius: BorderRadius.circular(2))])).toList(),
         ),
       ),
+      height: height,
     );
   }
 
-  Color _getTypeColor(String type) {
-    if (type.contains('BUY')) return const Color(0xFF3856C4);
-    if (type.contains('SELL')) return const Color(0xFF506076);
-    if (type.contains('EXCHANGE')) return const Color(0xFFA83836);
-    return const Color(0xFF506076);
-  }
+  Widget _buildFeeBreakdownChart({double height = 130}) {
+    final fees = [
+      _PieData('Bank', AppConstants.bankSellFeePercent, AppColors.success),
+      _PieData('Store', AppConstants.storeSellFeePercent, AppColors.error),
+      _PieData('Exc', AppConstants.exchangeFeePercent, Color(0xFF9C27B0)),
+      _PieData('Buy', AppConstants.buyFeePercent, AppColors.warning),
+    ];
 
-  IconData _getTypeIcon(String type) {
-    if (type.contains('BUY')) return Icons.shopping_cart;
-    if (type.contains('SELL')) return Icons.payments;
-    if (type.contains('EXCHANGE')) return Icons.error_outline;
-    return Icons.receipt;
-  }
-}
-
-// Helper Widgets for Transaction Table
-
-class _TransactionColumnHeader extends StatelessWidget {
-  final String title;
-  const _TransactionColumnHeader(this.title);
-
-  @override
-  Widget build(BuildContext context) {
-    return Text(
-      title,
-      style: const TextStyle(
-        fontSize: 10,
-        fontWeight: FontWeight.bold,
-        color: Color(0xFF596064),
-        letterSpacing: 2.0,
+    return ChartCard(
+      title: 'Fees %',
+      padding: EdgeInsets.all(6),
+      chart: PieChart(
+        PieChartData(
+          sections: fees.map((f) => PieChartSectionData(value: f.value, title: '${f.value.toInt()}%', color: f.color, radius: 30, titleStyle: TextStyle(fontSize: 7, fontWeight: FontWeight.bold, color: Colors.white))).toList(),
+          centerSpaceRadius: 15,
+          sectionsSpace: 1,
+        ),
       ),
+      height: height,
     );
   }
-}
 
-class _TransactionIconButton extends StatelessWidget {
-  final IconData icon;
-  final VoidCallback? onTap;
-  const _TransactionIconButton({required this.icon, this.onTap});
-
-  @override
-  Widget build(BuildContext context) {
-    return InkWell(
-      onTap: onTap ?? () {},
-      borderRadius: BorderRadius.circular(8),
-      child: Container(
-        padding: const EdgeInsets.all(8),
-        child: Icon(icon, size: 18, color: const Color(0xFF596064)),
-      ),
-    );
-  }
-}
-
-class _TransactionPageButton extends StatelessWidget {
-  final String? text;
-  final IconData? icon;
-  final bool isActive;
-  final bool isEnabled;
-
-  const _TransactionPageButton({
-    this.text,
-    this.icon,
-    this.isActive = false,
-    this.isEnabled = true,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      width: 32,
-      height: 32,
-      decoration: BoxDecoration(
-        color: isActive ? Colors.white : Colors.transparent,
-        borderRadius: BorderRadius.circular(8),
-        border: Border.all(color: const Color(0xFFACB3B7).withOpacity(0.1)),
-        boxShadow: isActive ? [
-          BoxShadow(
-            color: Colors.black.withOpacity(0.05),
-            blurRadius: 4,
-            offset: const Offset(0, 2),
-          )
-        ] : null,
-      ),
-      child: Center(
-        child: icon != null
-            ? Icon(icon, size: 16, color: isEnabled ? const Color(0xFF596064) : const Color(0xFFACB3B7))
-            : Text(
-                text!,
-                style: TextStyle(
-                  fontSize: 10,
-                  fontWeight: isActive ? FontWeight.black : FontWeight.bold,
-                  color: isActive ? const Color(0xFF3856C4) : const Color(0xFF2C3437),
+  Widget _buildUpdatePriceCard(BuildContext context, GoldController controller) {
+    final priceController = TextEditingController();
+    return ModernCard(
+      padding: EdgeInsets.all(8),
+      child: Row(
+        children: [
+          Expanded(
+            child: SizedBox(
+              height: 32,
+              child: TextField(
+                controller: priceController,
+                keyboardType: TextInputType.number,
+                style: TextStyle(fontSize: 11),
+                decoration: InputDecoration(
+                  contentPadding: EdgeInsets.symmetric(horizontal: 8),
+                  hintText: 'New Price',
+                  prefixIcon: Icon(Icons.attach_money, size: 12),
+                  border: OutlineInputBorder(borderRadius: BorderRadius.circular(6)),
                 ),
               ),
+            ),
+          ),
+          SizedBox(width: 6),
+          SizedBox(
+            height: 32,
+            child: Obx(() => ElevatedButton(
+              onPressed: controller.isUpdatingPrice.value ? null : () {
+                final price = double.tryParse(priceController.text);
+                if (price != null) controller.updatePrice(price);
+              },
+              child: controller.isUpdatingPrice.value ? SizedBox(width: 10, height: 10, child: CircularProgressIndicator(strokeWidth: 2)) : Text('Update', style: TextStyle(fontSize: 11)),
+              style: ElevatedButton.styleFrom(padding: EdgeInsets.symmetric(horizontal: 10), shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(6))),
+            )),
+          ),
+        ],
       ),
     );
   }
+
+  Widget _buildFeeStructure() {
+    return ModernCard(
+      padding: const EdgeInsets.all(10),
+      child: Row(
+        children: [
+          Expanded(child: _buildInfoItem('GOLD', AppConstants.goldType, Icons.diamond_outlined)),
+          const SizedBox(width: 4),
+          Expanded(child: _buildInfoItem('MIN', '${AppConstants.minGrams}g', Icons.balance_rounded)),
+          const SizedBox(width: 4),
+          Expanded(child: _buildInfoItem('INC', '${AppConstants.gramsIncrement}g', Icons.add_circle_outline_rounded)),
+          const SizedBox(width: 4),
+          Expanded(child: _buildInfoItem('EXC', '${AppConstants.minExchangeGrams}g', Icons.swap_horiz_rounded)),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildInfoItem(String label, String value, IconData icon) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 6),
+      decoration: BoxDecoration(color: const Color(0xFFF8FAFC), borderRadius: BorderRadius.circular(6), border: Border.all(color: const Color(0xFFF1F5F9), width: 1)),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(icon, color: const Color(0xFF3B82F6), size: 14),
+          Text(label, style: TextStyle(fontSize: 6, fontWeight: FontWeight.w700, color: const Color(0xFF94A3B8))),
+          Text(value, style: TextStyle(fontSize: 9, fontWeight: FontWeight.w800, color: const Color(0xFF1E293B))),
+        ],
+      ),
+    );
+  }
+}
+
+class _BarData {
+  final int x; final String label; final double value; final Color color;
+  _BarData(this.x, this.label, this.value, this.color);
+}
+
+class _PieData {
+  final String label; final double value; final Color color;
+  _PieData(this.label, this.value, this.color);
 }

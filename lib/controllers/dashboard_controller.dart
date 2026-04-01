@@ -10,6 +10,11 @@ class DashboardController extends GetxController {
   final RxList<Transaction> recentTransactions    = <Transaction>[].obs;
   final RxList<Transaction> pendingTransactions   = <Transaction>[].obs;
 
+  // Pagination
+  final RxInt currentPage = 1.obs;
+  final RxInt itemsPerPage = 10.obs;
+  List<Transaction> _allTransactions = [];
+
   // Stats
   final RxInt    totalTransactions         = 0.obs;
   final RxInt    totalBuyTransactions      = 0.obs;
@@ -68,13 +73,46 @@ class DashboardController extends GetxController {
       // Sort by newest first
       all.sort((a, b) => b.createdAt.compareTo(a.createdAt));
 
-      recentTransactions.value  = all.take(10).toList();
+      _allTransactions = all;
+      _updatePagedTransactions();
       pendingTransactions.value = all.where((t) => t.status == 'PENDING').toList();
 
     } catch (e) {
       errorMessage.value = e.toString().replaceAll('Exception: ', '');
     } finally {
       isLoading.value = false;
+    }
+  }
+
+  void _updatePagedTransactions() {
+    final startIndex = (currentPage.value - 1) * itemsPerPage.value;
+    final endIndex = (startIndex + itemsPerPage.value).clamp(0, _allTransactions.length);
+    
+    if (startIndex < _allTransactions.length) {
+      recentTransactions.value = _allTransactions.sublist(startIndex, endIndex);
+    } else {
+      recentTransactions.value = [];
+    }
+  }
+
+  int get totalPages => (_allTransactions.length / itemsPerPage.value).ceil();
+
+  void goToPage(int page) {
+    if (page >= 1 && page <= totalPages) {
+      currentPage.value = page;
+      _updatePagedTransactions();
+    }
+  }
+
+  void nextPage() {
+    if (currentPage.value < totalPages) {
+      goToPage(currentPage.value + 1);
+    }
+  }
+
+  void previousPage() {
+    if (currentPage.value > 1) {
+      goToPage(currentPage.value - 1);
     }
   }
 

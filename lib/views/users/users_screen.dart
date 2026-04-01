@@ -1,394 +1,337 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
+import 'package:fl_chart/fl_chart.dart';
+import 'package:flutter_animate/flutter_animate.dart';
 import '../../controllers/user_controller.dart';
 import '../../core/constants/app_colors.dart';
-import '../../core/constants/app_constants.dart';
-import '../../core/utils/responsive.dart';
 import '../../core/utils/formatters.dart';
 import '../../widgets/common/loading_widget.dart';
 import '../../widgets/common/error_widget.dart' as custom_error;
-import '../../widgets/common/empty_state_widget.dart';
 import '../../models/user.dart';
 
-class UsersScreen extends StatelessWidget {
+class UsersScreen extends StatefulWidget {
   const UsersScreen({Key? key}) : super(key: key);
+  @override
+  State<UsersScreen> createState() => _UsersScreenState();
+}
 
+class _UsersScreenState extends State<UsersScreen> {
   @override
   Widget build(BuildContext context) {
     final controller = Get.put(UserController());
 
-    return Obx(() {
-      if (controller.isLoading.value) {
-        return LoadingWidget(message: 'Loading users...');
-      }
+    return Scaffold(
+      backgroundColor: const Color(0xFFF8F9FA),
+      body: Obx(() {
+        if (controller.isLoading.value) {
+          return const LoadingWidget(message: 'Analyzing Data...');
+        }
+        if (controller.errorMessage.value.isNotEmpty) {
+          return custom_error.CustomErrorWidget(
+            message: controller.errorMessage.value,
+            onRetry: controller.refresh,
+          );
+        }
 
-      if (controller.errorMessage.value.isNotEmpty) {
-        return custom_error.CustomErrorWidget(
-          message: controller.errorMessage.value,
-          onRetry: controller.refresh,
-        );
-      }
+        final totalUsers = controller.users.length;
+        final activeUsers = controller.users
+            .where((u) => controller.getUserTransactions(u.id).isNotEmpty)
+            .length;
+        final totalTransactions = controller.users.fold<int>(
+            0, (sum, u) => sum + controller.getUserTransactions(u.id).length);
 
-      return Column(
-        children: [
-          // Search Bar
-          Container(
-            padding: EdgeInsets.all(AppConstants.defaultPadding),
-            decoration: BoxDecoration(
-              color: AppColors.background,
-              border: Border(
-                bottom: BorderSide(color: AppColors.grey200, width: 1),
-              ),
-            ),
-            child: Row(
+        return RefreshIndicator(
+          onRefresh: () async => controller.refresh(),
+          child: SingleChildScrollView(
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 20),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Expanded(
-                  child: TextField(
-                    decoration: InputDecoration(
-                      hintText: 'Search users...',
-                      prefixIcon: Icon(Icons.search),
-                      suffixIcon: Obx(() => controller.searchQuery.value.isNotEmpty
-                          ? IconButton(
-                              icon: Icon(Icons.clear),
-                              onPressed: () => controller.setSearchQuery(''),
-                            )
-                          : SizedBox.shrink()),
-                    ),
-                    onChanged: controller.setSearchQuery,
-                  ),
+                _buildHeader(controller),
+                const SizedBox(height: 20),
+
+                // Compact Soft Stat Cards
+                _buildStatCards(totalUsers, activeUsers, totalTransactions),
+
+                const SizedBox(height: 24),
+                _buildSectionTitle('Performance Trends'),
+                const SizedBox(height: 12),
+                _buildLineChart(controller),
+
+                const SizedBox(height: 20),
+                Row(
+                  children: [
+                    Expanded(child: _buildPieChart(activeUsers, totalUsers)),
+                    const SizedBox(width: 12),
+                    Expanded(child: _buildBarChart(controller)),
+                  ],
                 ),
-                SizedBox(width: 12),
-                IconButton(
-                  icon: Icon(Icons.refresh),
-                  onPressed: controller.refresh,
-                  tooltip: 'Refresh',
-                ),
+
+                const SizedBox(height: 28),
+                _buildUsersSection(controller),
               ],
             ),
           ),
-
-          // Users List
-          Expanded(
-            child: controller.filteredUsers.isEmpty
-                ? EmptyStateWidget(
-                    message: 'No users found',
-                    icon: Icons.people_outline,
-                  )
-                : _buildUsersList(context, controller),
-          ),
-        ],
-      );
-    });
+        );
+      }),
+    );
   }
 
-  Widget _buildUsersList(BuildContext context, UserController controller) {
-    final isMobile = Responsive.isMobile(context);
-
-    if (isMobile) {
-      return ListView.builder(
-        padding: EdgeInsets.all(AppConstants.defaultPadding),
-        itemCount: controller.filteredUsers.length,
-        itemBuilder: (context, index) {
-          return _buildUserCard(
-            context,
-            controller.filteredUsers[index],
-            controller,
-          );
-        },
-      );
-    }
-
-    return SingleChildScrollView(
-      padding: EdgeInsets.all(AppConstants.defaultPadding),
-      child: Card(
-        child: SingleChildScrollView(
-          scrollDirection: Axis.horizontal,
-          child: DataTable(
-            columns: [
-              DataColumn(label: Text('User ID')),
-              DataColumn(label: Text('Email')),
-              DataColumn(label: Text('Total Transactions')),
-              DataColumn(label: Text('Total Grams')),
-              DataColumn(label: Text('Joined')),
-              DataColumn(label: Text('Actions')),
-            ],
-            rows: controller.filteredUsers.map((user) {
-              final transactions = controller.getUserTransactions(user.id);
-              final totalGrams = transactions.fold<double>(
-                0.0,
-                (sum, tx) {
-                  if (tx.type.contains('BUY') && tx.status != 'REJECTED') {
-                    return sum + tx.grams;
-                  } else if ((tx.type.contains('SELL') || tx.type.contains('EXCHANGE')) 
-                      && tx.status != 'REJECTED' && tx.status != 'PENDING') {
-                    return sum - tx.grams;
-                  }
-                  return sum;
-                },
-              );
-
-              return DataRow(
-                cells: [
-                  DataCell(
-                    Tooltip(
-                      message: user.id,
-                      child: Text(user.id.substring(0, 8) + '...'),
-                    ),
-                  ),
-                  DataCell(Text(user.email ?? 'N/A')),
-                  DataCell(Text(transactions.length.toString())),
-                  DataCell(Text(Formatters.formatGrams(totalGrams))),
-                  DataCell(Text(Formatters.formatDate(user.createdAt))),
-                  DataCell(
-                    TextButton(
-                      onPressed: () => _showUserDetails(context, user, controller),
-                      child: Text('View Details'),
-                    ),
-                  ),
-                ],
-              );
-            }).toList(),
-          ),
-        ),
+  Widget _buildSectionTitle(String title) {
+    return Text(
+      title,
+      style: TextStyle(
+        fontSize: 16,
+        fontWeight: FontWeight.bold,
+        color: AppColors.textPrimary.withOpacity(0.8),
+        letterSpacing: -0.3,
       ),
     );
   }
 
-  Widget _buildUserCard(BuildContext context, User user, UserController controller) {
-    final transactions = controller.getUserTransactions(user.id);
-    final totalGrams = transactions.fold<double>(
-      0.0,
-      (sum, tx) {
-        if (tx.type.contains('BUY') && tx.status != 'REJECTED') {
-          return sum + tx.grams;
-        } else if ((tx.type.contains('SELL') || tx.type.contains('EXCHANGE')) 
-            && tx.status != 'REJECTED' && tx.status != 'PENDING') {
-          return sum - tx.grams;
-        }
-        return sum;
-      },
-    );
-
-    return Card(
-      margin: EdgeInsets.only(bottom: 12),
-      child: ListTile(
-        leading: CircleAvatar(
-          backgroundColor: AppColors.primary,
-          child: Icon(Icons.person, color: Colors.white),
-        ),
-        title: Text(user.email ?? 'User ${user.id.substring(0, 8)}'),
-        subtitle: Column(
+  Widget _buildHeader(UserController controller) {
+    return Row(
+      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+      children: [
+        Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            SizedBox(height: 4),
-            Text('ID: ${user.id.substring(0, 8)}...'),
-            Text('${transactions.length} transactions • ${Formatters.formatGrams(totalGrams)}'),
-            Text('Joined: ${Formatters.formatDate(user.createdAt)}'),
-          ],
-        ),
-        isThreeLine: true,
-        trailing: Icon(Icons.arrow_forward_ios, size: 16),
-        onTap: () => _showUserDetails(context, user, controller),
-      ),
-    );
-  }
-
-  void _showUserDetails(BuildContext context, User user, UserController controller) {
-    final transactions = controller.getUserTransactions(user.id);
-    final totalGrams = transactions.fold<double>(
-      0.0,
-      (sum, tx) {
-        if (tx.type.contains('BUY') && tx.status != 'REJECTED') {
-          return sum + tx.grams;
-        } else if ((tx.type.contains('SELL') || tx.type.contains('EXCHANGE')) 
-            && tx.status != 'REJECTED' && tx.status != 'PENDING') {
-          return sum - tx.grams;
-        }
-        return sum;
-      },
-    );
-
-    Get.dialog(
-      Dialog(
-        child: Container(
-          constraints: BoxConstraints(maxWidth: 600, maxHeight: 700),
-          child: Column(
-            children: [
-              // Header
-              Container(
-                padding: EdgeInsets.all(AppConstants.defaultPadding),
-                decoration: BoxDecoration(
-                  color: Colors.white,
-                  border: Border(
-                    bottom: BorderSide(color: AppColors.grey200),
-                  ),
-                ),
-                child: Row(
-                  children: [
-                    CircleAvatar(
-                      backgroundColor: AppColors.primary,
-                      radius: 24,
-                      child: Icon(Icons.person, color: Colors.white, size: 28),
-                    ),
-                    SizedBox(width: 16),
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            user.email ?? 'User Details',
-                            style: TextStyle(
-                              fontSize: 18,
-                              fontWeight: FontWeight.bold,
-                            ),
-                          ),
-                          SizedBox(height: 4),
-                          Text(
-                            'ID: ${user.id}',
-                            style: TextStyle(
-                              fontSize: 12,
-                              color: AppColors.grey600,
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                    IconButton(
-                      icon: Icon(Icons.close),
-                      onPressed: () => Get.back(),
-                    ),
-                  ],
-                ),
-              ),
-
-              // User Info
-              Padding(
-                padding: EdgeInsets.all(AppConstants.defaultPadding),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    _buildInfoRow('Email', user.email ?? 'N/A'),
-                    _buildInfoRow('Phone', user.phoneNumber ?? 'N/A'),
-                    _buildInfoRow('Joined', Formatters.formatDate(user.createdAt)),
-                    _buildInfoRow('Total Gold', Formatters.formatGrams(totalGrams)),
-                    _buildInfoRow('Total Transactions', transactions.length.toString()),
-                  ],
-                ),
-              ),
-
-              Divider(),
-
-              // Transactions List
-              Padding(
-                padding: EdgeInsets.symmetric(horizontal: AppConstants.defaultPadding),
-                child: Row(
-                  children: [
-                    Text(
-                      'Transaction History',
-                      style: TextStyle(
-                        fontSize: 16,
-                        fontWeight: FontWeight.bold,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-
-              Expanded(
-                child: transactions.isEmpty
-                    ? Center(
-                        child: Text(
-                          'No transactions',
-                          style: TextStyle(color: AppColors.grey600),
-                        ),
-                      )
-                    : ListView.builder(
-                        padding: EdgeInsets.all(AppConstants.defaultPadding),
-                        itemCount: transactions.length,
-                        itemBuilder: (context, index) {
-                          final tx = transactions[index];
-                          return ListTile(
-                            leading: _buildStatusIcon(tx.status),
-                            title: Text(Formatters.formatTransactionType(tx.type)),
-                            subtitle: Text(
-                              '${Formatters.formatGrams(tx.grams)} • ${Formatters.formatCurrency(tx.amountBdt)}',
-                            ),
-                            trailing: Text(
-                              Formatters.formatDate(tx.createdAt),
-                              style: TextStyle(
-                                fontSize: 12,
-                                color: AppColors.grey600,
-                              ),
-                            ),
-                          );
-                        },
-                      ),
-              ),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
-
-  Widget _buildInfoRow(String label, String value) {
-    return Padding(
-      padding: EdgeInsets.symmetric(vertical: 8),
-      child: Row(
-        children: [
-          SizedBox(
-            width: 150,
-            child: Text(
-              label,
+            Text(
+              'Dashboard',
               style: TextStyle(
-                color: AppColors.grey600,
-                fontSize: 14,
+                fontSize: 26,
+                fontWeight: FontWeight.w900,
+                color: AppColors.textPrimary,
+                letterSpacing: -0.8,
               ),
             ),
+            Text(
+              'System health and user activity',
+              style: TextStyle(fontSize: 13, color: AppColors.grey500),
+            ),
+          ],
+        ),
+        GestureDetector(
+          onTap: controller.refresh,
+          child: Container(
+            padding: const EdgeInsets.all(10),
+            decoration: BoxDecoration(
+              color: Colors.white,
+              shape: BoxShape.circle,
+              boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.05), blurRadius: 10)],
+            ),
+            child: Icon(Icons.refresh_rounded, color: AppColors.primary, size: 22),
           ),
+        ),
+      ],
+    );
+  }
+
+  // ── Compact Soft Stat Cards ────────────────────────────────────────────────
+  Widget _buildStatCards(int total, int active, int txn) {
+    return Row(
+      children: [
+        Expanded(child: _statCard('Total Users', total.toString(), Icons.group_rounded, const Color(0xFF2196F3))),
+        const SizedBox(width: 10),
+        Expanded(child: _statCard('Active Now', active.toString(), Icons.bolt_rounded, const Color(0xFF4CAF50))),
+        const SizedBox(width: 10),
+        Expanded(child: _statCard('Transactions', txn.toString(), Icons.receipt_rounded, const Color(0xFF673AB7))),
+        const SizedBox(width: 10),
+        Expanded(child: _statCard('Growth', '+12.5%', Icons.show_chart_rounded, const Color(0xFFFF9800))),
+      ],
+    );
+  }
+
+  Widget _statCard(String label, String value, IconData icon, Color color) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 10),
+      decoration: BoxDecoration(
+        color: color.withOpacity(0.1), // Soft background
+        borderRadius: BorderRadius.circular(14),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Container(
+            padding: const EdgeInsets.all(5),
+            decoration: BoxDecoration(
+              color: Colors.white.withOpacity(0.6),
+              borderRadius: BorderRadius.circular(8),
+            ),
+            child: Icon(icon, size: 16, color: color)
+                .animate(onPlay: (controller) => controller.repeat(reverse: true))
+                .scaleXY(duration: 1200.ms, begin: 1.0, end: 1.1)
+                .then()
+                .scaleXY(duration: 1200.ms, begin: 1.1, end: 1.0),
+          ),
+          const SizedBox(width: 8),
           Expanded(
-            child: Text(
-              value,
-              style: TextStyle(
-                fontSize: 14,
-                fontWeight: FontWeight.w600,
-              ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Text(
+                  value,
+                  style: TextStyle(
+                    fontSize: 14,
+                    fontWeight: FontWeight.bold,
+                    color: color.withOpacity(0.9),
+                  ),
+                ).animate().fadeIn(duration: 400.ms),
+                Text(
+                  label,
+                  style: TextStyle(
+                    fontSize: 9,
+                    fontWeight: FontWeight.w600,
+                    color: color.withOpacity(0.7),
+                  ),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                ).animate().fadeIn(duration: 500.ms, delay: 100.ms),
+              ],
             ),
           ),
         ],
       ),
+    ).animate().fadeIn(duration: 300.ms).slideX(begin: 0.1);
+  }
+
+  // ── Line Chart (Enhanced with more values) ────────────────────────────────
+  Widget _buildLineChart(UserController controller) {
+    return Container(
+      height: 200,
+      padding: const EdgeInsets.fromLTRB(10, 20, 20, 10),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(18),
+        boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.02), blurRadius: 15)],
+      ),
+      child: LineChart(
+        LineChartData(
+          gridData: FlGridData(
+            show: true,
+            drawVerticalLine: false,
+            horizontalInterval: 2,
+            getDrawingHorizontalLine: (v) => FlLine(color: Colors.grey.withOpacity(0.05), strokeWidth: 1),
+          ),
+          titlesData: FlTitlesData(
+            rightTitles: AxisTitles(sideTitles: SideTitles(showTitles: false)),
+            topTitles: AxisTitles(sideTitles: SideTitles(showTitles: false)),
+            bottomTitles: AxisTitles(
+              sideTitles: SideTitles(
+                showTitles: true,
+                getTitlesWidget: (v, m) {
+                  const days = ['1 Mar', '2 Mar', '3 Mar', '4 Mar', '5 Mar', '6 Mar', '7 Mar'];
+                  return Text(days[v.toInt() % 7], style: const TextStyle(color: Colors.grey, fontSize: 9));
+                },
+              ),
+            ),
+          ),
+          borderData: FlBorderData(show: false),
+          lineBarsData: [
+            LineChartBarData(
+              spots: const [FlSpot(0, 2), FlSpot(1, 1.5), FlSpot(2, 4), FlSpot(3, 3), FlSpot(4, 5), FlSpot(5, 4), FlSpot(6, 6)],
+              isCurved: true,
+              gradient: const LinearGradient(colors: [Color(0xFF2196F3), Color(0xFF00BCD4)]),
+              barWidth: 3,
+              dotData: FlDotData(show: true),
+              belowBarData: BarAreaData(show: true, gradient: LinearGradient(colors: [const Color(0xFF2196F3).withOpacity(0.15), const Color(0xFF2196F3).withOpacity(0)])),
+            ),
+          ],
+        ),
+      ),
     );
   }
 
-  Widget _buildStatusIcon(String status) {
-    Color color;
-    IconData icon;
+  Widget _buildPieChart(int active, int total) {
+    return Container(
+      height: 160,
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(18)),
+      child: PieChart(
+        PieChartData(
+          sections: [
+            PieChartSectionData(color: const Color(0xFF4CAF50), value: active.toDouble(), radius: 35, showTitle: false),
+            PieChartSectionData(color: Colors.grey.shade100, value: (total - active).toDouble(), radius: 30, showTitle: false),
+          ],
+          centerSpaceRadius: 25,
+        ),
+      ),
+    );
+  }
 
-    switch (status.toUpperCase()) {
-      case 'PENDING':
-        color = AppColors.statusPending;
-        icon = Icons.pending;
-        break;
-      case 'APPROVED':
-        color = AppColors.statusApproved;
-        icon = Icons.check_circle;
-        break;
-      case 'PAID':
-        color = AppColors.statusPaid;
-        icon = Icons.payment;
-        break;
-      case 'REJECTED':
-        color = AppColors.statusRejected;
-        icon = Icons.cancel;
-        break;
-      default:
-        color = AppColors.grey600;
-        icon = Icons.help;
-    }
+  Widget _buildBarChart(UserController controller) {
+    return Container(
+      height: 160,
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(18)),
+      child: BarChart(
+        BarChartData(
+          alignment: BarChartAlignment.spaceAround,
+          maxY: 10,
+          barGroups: [
+            BarChartGroupData(x: 0, barRods: [BarChartRodData(toY: 7, color: const Color(0xFF4CAF50), width: 10, borderRadius: BorderRadius.circular(4))]),
+            BarChartGroupData(x: 1, barRods: [BarChartRodData(toY: 4, color: Colors.orange, width: 10, borderRadius: BorderRadius.circular(4))]),
+            BarChartGroupData(x: 2, barRods: [BarChartRodData(toY: 2, color: Colors.red, width: 10, borderRadius: BorderRadius.circular(4))]),
+          ],
+          titlesData: FlTitlesData(show: false),
+          gridData: FlGridData(show: false),
+          borderData: FlBorderData(show: false),
+        ),
+      ),
+    );
+  }
 
-    return CircleAvatar(
-      backgroundColor: Colors.white,
-      child: Icon(icon, color: color, size: 20),
+  Widget _buildUsersSection(UserController controller) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: [
+            _buildSectionTitle('Recent Users'),
+            TextButton(onPressed: () {}, child: const Text('View All', style: TextStyle(fontSize: 13))),
+          ],
+        ),
+        const SizedBox(height: 12),
+        ListView.separated(
+          shrinkWrap: true,
+          physics: const NeverScrollableScrollPhysics(),
+          itemCount: controller.filteredUsers.length.clamp(0, 5),
+          separatorBuilder: (_, __) => const SizedBox(height: 10),
+          itemBuilder: (context, index) {
+            final user = controller.filteredUsers[index];
+            return Container(
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.circular(16),
+                boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.01), blurRadius: 10)],
+              ),
+              child: Row(
+                children: [
+                  CircleAvatar(
+                    radius: 20,
+                    backgroundColor: AppColors.primary.withOpacity(0.1),
+                    child: Text((user.email?.isNotEmpty ?? false) ? user.email![0].toUpperCase() : 'U', style: TextStyle(color: AppColors.primary, fontWeight: FontWeight.bold)),
+                  ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(user.email ?? 'User', style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14)),
+                        Text('Joined ${Formatters.formatDate(user.createdAt)}', style: TextStyle(color: AppColors.grey500, fontSize: 11)),
+                      ],
+                    ),
+                  ),
+                  const Icon(Icons.chevron_right_rounded, color: Colors.grey, size: 20),
+                ],
+              ),
+            );
+          },
+        ),
+      ],
     );
   }
 }
