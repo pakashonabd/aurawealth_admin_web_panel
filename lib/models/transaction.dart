@@ -17,6 +17,7 @@ class Transaction {
   final String? userId;
   final String? userName;
   final String? userEmail;
+  final String? userPhoto;
 
   Transaction({
     required this.id,
@@ -37,6 +38,7 @@ class Transaction {
     this.userId,
     this.userName,
     this.userEmail,
+    this.userPhoto,
   });
 
   static double _d(dynamic v) {
@@ -96,6 +98,7 @@ class Transaction {
       userId:       json['user_id']?.toString(),
       userName:     json['user_name']?.toString(),
       userEmail:    json['user_email']?.toString(),
+      userPhoto:    json['user_photo']?.toString() ?? json['photo_url']?.toString() ?? json['profile_photo']?.toString(),
     );
   }
 
@@ -118,5 +121,6 @@ class Transaction {
     'user_id': userId,
     'user_name': userName,
     'user_email': userEmail,
+    'user_photo': userPhoto,
   };
 }

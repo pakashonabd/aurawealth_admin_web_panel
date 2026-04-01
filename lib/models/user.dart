@@ -1,8 +1,10 @@
 class User {
   final String id;
   final String? firebaseUid;
+  final String? name;
   final String? email;
   final String? phoneNumber;
+  final String? photoUrl;
   final DateTime createdAt;
   final bool phoneVerified;
   final String kycStatus;
@@ -13,8 +15,10 @@ class User {
   User({
     required this.id,
     this.firebaseUid,
+    this.name,
     this.email,
     this.phoneNumber,
+    this.photoUrl,
     required this.createdAt,
     required this.phoneVerified,
     required this.kycStatus,
@@ -41,8 +45,10 @@ class User {
     return User(
       id: json['id']?.toString() ?? json['user_id']?.toString() ?? '',
       firebaseUid: json['firebase_uid']?.toString(),
-      email: json['email']?.toString(),
+      name: json['name']?.toString() ?? json['user_name']?.toString(),
+      email: json['email']?.toString() ?? json['user_email']?.toString(),
       phoneNumber: json['phone_number']?.toString(),
+      photoUrl: json['photo_url']?.toString() ?? json['profile_photo']?.toString() ?? json['user_photo']?.toString(),
       createdAt: createdAt,
       phoneVerified: json['phone_verified'] == true || json['phone_verified'] == 1,
       kycStatus: json['kyc_status']?.toString() ?? 'pending',
@@ -56,8 +62,10 @@ class User {
     return {
       'id': id,
       'firebase_uid': firebaseUid,
+      'name': name,
       'email': email,
       'phone_number': phoneNumber,
+      'photo_url': photoUrl,
       'created_at': createdAt.toIso8601String(),
       'phone_verified': phoneVerified,
       'kyc_status': kycStatus,

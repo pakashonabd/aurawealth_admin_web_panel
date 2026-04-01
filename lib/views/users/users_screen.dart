@@ -313,15 +313,51 @@ class _UsersScreenState extends State<UsersScreen> {
                   CircleAvatar(
                     radius: 20,
                     backgroundColor: AppColors.primary.withOpacity(0.1),
-                    child: Text((user.email?.isNotEmpty ?? false) ? user.email![0].toUpperCase() : 'U', style: TextStyle(color: AppColors.primary, fontWeight: FontWeight.bold)),
+                    backgroundImage: (user.photoUrl != null && user.photoUrl!.isNotEmpty)
+                        ? NetworkImage(user.photoUrl!)
+                        : null,
+                    child: (user.photoUrl == null || user.photoUrl!.isEmpty)
+                        ? Text(
+                            (user.name?.isNotEmpty ?? false)
+                                ? user.name![0].toUpperCase()
+                                : (user.email?.isNotEmpty ?? false)
+                                    ? user.email![0].toUpperCase()
+                                    : 'U',
+                            style: TextStyle(
+                              color: AppColors.primary,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          )
+                        : null,
                   ),
                   const SizedBox(width: 12),
                   Expanded(
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        Text(user.email ?? 'User', style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14)),
-                        Text('Joined ${Formatters.formatDate(user.createdAt)}', style: TextStyle(color: AppColors.grey500, fontSize: 11)),
+                        Text(
+                          user.name ?? user.email ?? 'User',
+                          style: const TextStyle(
+                            fontWeight: FontWeight.bold,
+                            fontSize: 14,
+                          ),
+                        ),
+                        if (user.email != null && user.name != null)
+                          Text(
+                            user.email!,
+                            style: TextStyle(
+                              color: AppColors.grey500,
+                              fontSize: 11,
+                            ),
+                          )
+                        else
+                          Text(
+                            'Joined ${Formatters.formatDate(user.createdAt)}',
+                            style: TextStyle(
+                              color: AppColors.grey500,
+                              fontSize: 11,
+                            ),
+                          ),
                       ],
                     ),
                   ),

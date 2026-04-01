@@ -39,10 +39,12 @@ class UserController extends GetxController {
           if (!userMap.containsKey(tx.userId)) {
             userMap[tx.userId!] = User(
               id: tx.userId!,
+              name: tx.userName,
               email: tx.userEmail,
+              photoUrl: tx.userPhoto,
               firebaseUid: null,
               phoneNumber: null,
-              createdAt: tx.createdAt, // Use transaction date as proxy
+              createdAt: tx.createdAt,
               phoneVerified: true,
               kycStatus: 'active',
             );
@@ -72,6 +74,7 @@ class UserController extends GetxController {
       final query = searchQuery.value.toLowerCase();
       filtered = filtered.where((u) =>
           u.id.toLowerCase().contains(query) ||
+          (u.name?.toLowerCase().contains(query) ?? false) ||
           (u.email?.toLowerCase().contains(query) ?? false) ||
           (u.phoneNumber?.toLowerCase().contains(query) ?? false)
       ).toList();

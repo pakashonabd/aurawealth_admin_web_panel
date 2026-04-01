@@ -3,6 +3,8 @@ import 'package:get/get.dart';
 import 'package:lottie/lottie.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 import '../../services/api_service.dart';
+import '../../controllers/user_controller.dart';
+import '../../models/user.dart';
 import '../../core/constants/app_colors.dart';
 import '../../core/constants/app_constants.dart';
 import '../../core/utils/formatters.dart';
@@ -19,6 +21,7 @@ class _StoreOperationsScreenState extends State<StoreOperationsScreen>
     with SingleTickerProviderStateMixin {
   late TabController _tabController;
   final _apiService = ApiService();
+  final _userController = Get.put(UserController());
 
   // Credit Grams Form
   final _creditFormKey = GlobalKey<FormState>();
@@ -26,11 +29,9 @@ class _StoreOperationsScreenState extends State<StoreOperationsScreen>
   final _gramsController = TextEditingController();
   final _userSearchController = TextEditingController();
   bool _isCreditLoading = false;
-  List<Map<String, dynamic>> _allUsers = [];
-  List<Map<String, dynamic>> _filteredUsers = [];
-  bool _isLoadingUsers = false;
+  List<User> _filteredUsers = [];
   String? _selectedUserId;
-  String? _selectedUserName;
+  User? _selectedUser;
 
   // Redeem Code Form
   final _redeemFormKey = GlobalKey<FormState>();
@@ -51,7 +52,7 @@ class _StoreOperationsScreenState extends State<StoreOperationsScreen>
     super.initState();
     _tabController = TabController(length: 2, vsync: this);
     _startTipRotation();
-    _loadUsers();
+    _filteredUsers = _userController.users;
   }
 
   void _startTipRotation() {
@@ -75,34 +76,19 @@ class _StoreOperationsScreenState extends State<StoreOperationsScreen>
     super.dispose();
   }
 
-  Future<void> _loadUsers() async {
-    setState(() => _isLoadingUsers = true);
-    try {
-      final users = await _apiService.getAllUsers();
-      setState(() {
-        _allUsers = users.map((user) => {
-          'id': user['id'] ?? user['user_id'] ?? '',
-          'name': user['name'] ?? user['username'] ?? user['email'] ?? 'Unknown User',
-        }).toList();
-        _filteredUsers = _allUsers;
-      });
-    } catch (e) {
-      print('Error loading users: $e');
-    } finally {
-      setState(() => _isLoadingUsers = false);
-    }
-  }
-
   void _filterUsers(String query) {
     setState(() {
       if (query.isEmpty) {
-        _filteredUsers = _allUsers;
+        _filteredUsers = _userController.users;
       } else {
-        _filteredUsers = _allUsers.where((user) {
-          final name = user['name'].toString().toLowerCase();
-          final id = user['id'].toString().toLowerCase();
+        _filteredUsers = _userController.users.where((user) {
+          final name = (user.name ?? '').toLowerCase();
+          final email = (user.email ?? '').toLowerCase();
+          final id = user.id.toLowerCase();
           final searchQuery = query.toLowerCase();
-          return name.contains(searchQuery) || id.contains(searchQuery);
+          return name.contains(searchQuery) || 
+                 email.contains(searchQuery) || 
+                 id.contains(searchQuery);
         }).toList();
       }
     });
@@ -133,7 +119,7 @@ class _StoreOperationsScreenState extends State<StoreOperationsScreen>
         _showSuccessAnimation();
         Get.snackbar(
           'Success',
-          'Successfully credited ${Formatters.formatGrams(grams)} to $_selectedUserName',
+          'Successfully credited ${Formatters.formatGrams(grams)} to ${_selectedUser?.name ?? _selectedUser?.email ?? "user"}',
           backgroundColor: AppColors.success.withValues(alpha: 0.1),
           colorText: AppColors.success,
           icon: Icon(Icons.check_circle, color: AppColors.success),
@@ -141,7 +127,7 @@ class _StoreOperationsScreenState extends State<StoreOperationsScreen>
 
         setState(() {
           _selectedUserId = null;
-          _selectedUserName = null;
+          _selectedUser = null;
           _userSearchController.clear();
         });
         _gramsController.clear();
@@ -600,7 +586,7 @@ class _StoreOperationsScreenState extends State<StoreOperationsScreen>
                                     onChanged: _filterUsers,
                                   ),
                                   const Divider(),
-                                  _isLoadingUsers
+                                  Obx(() => _userController.isLoading.value
                                       ? const Padding(
                                           padding: EdgeInsets.all(16.0),
                                           child: CircularProgressIndicator(),
@@ -624,12 +610,12 @@ class _StoreOperationsScreenState extends State<StoreOperationsScreen>
                                                     return InkWell(
                                                       onTap: () {
                                                         setState(() {
-                                                          _selectedUserId = user['id'];
-                                                          _selectedUserName = user['name'];
+                                                          _selectedUserId = user.id;
+                                                          _selectedUser = user;
                                                         });
                                                         Navigator.pop(context);
                                                         _userSearchController.clear();
-                                                        _filteredUsers = _allUsers;
+                                                        _filteredUsers = _userController.users;
                                                       },
                                                       child: Container(
                                                         padding: const EdgeInsets.symmetric(
@@ -637,16 +623,32 @@ class _StoreOperationsScreenState extends State<StoreOperationsScreen>
                                                           vertical: 12,
                                                         ),
                                                         decoration: BoxDecoration(
-                                                          color: _selectedUserId == user['id']
+                                                          color: _selectedUserId == user.id
                                                               ? AppColors.primary.withValues(alpha: 0.1)
                                                               : Colors.transparent,
                                                         ),
                                                         child: Row(
                                                           children: [
-                                                            Icon(
-                                                              Icons.person,
-                                                              color: AppColors.primary,
-                                                              size: 20,
+                                                            CircleAvatar(
+                                                              radius: 18,
+                                                              backgroundColor: AppColors.primary.withOpacity(0.1),
+                                                              backgroundImage: (user.photoUrl != null && user.photoUrl!.isNotEmpty)
+                                                                  ? NetworkImage(user.photoUrl!)
+                                                                  : null,
+                                                              child: (user.photoUrl == null || user.photoUrl!.isEmpty)
+                                                                  ? Text(
+                                                                      (user.name?.isNotEmpty ?? false)
+                                                                          ? user.name![0].toUpperCase()
+                                                                          : (user.email?.isNotEmpty ?? false)
+                                                                              ? user.email![0].toUpperCase()
+                                                                              : 'U',
+                                                                      style: TextStyle(
+                                                                        color: AppColors.primary,
+                                                                        fontWeight: FontWeight.bold,
+                                                                        fontSize: 14,
+                                                                      ),
+                                                                    )
+                                                                  : null,
                                                             ),
                                                             const SizedBox(width: 12),
                                                             Expanded(
@@ -655,16 +657,25 @@ class _StoreOperationsScreenState extends State<StoreOperationsScreen>
                                                                     CrossAxisAlignment.start,
                                                                 children: [
                                                                   Text(
-                                                                    user['name'],
+                                                                    user.name ?? user.email ?? 'User',
                                                                     style: TextStyle(
                                                                       fontWeight: FontWeight.w500,
                                                                       color: AppColors.textPrimary,
                                                                     ),
                                                                   ),
+                                                                  if (user.email != null && user.name != null)
+                                                                    Text(
+                                                                      user.email!,
+                                                                      style: TextStyle(
+                                                                        fontSize: 11,
+                                                                        color: AppColors.grey600,
+                                                                      ),
+                                                                      overflow: TextOverflow.ellipsis,
+                                                                    ),
                                                                   Text(
-                                                                    'ID: ${user['id']}',
+                                                                    'ID: ${user.id.length > 20 ? user.id.substring(0, 20) + "..." : user.id}',
                                                                     style: TextStyle(
-                                                                      fontSize: 12,
+                                                                      fontSize: 11,
                                                                       color: AppColors.grey600,
                                                                     ),
                                                                   ),
@@ -679,6 +690,7 @@ class _StoreOperationsScreenState extends State<StoreOperationsScreen>
                                                 ),
                                               ),
                                             ),
+                                  ),
                                 ],
                               ),
                             ),
