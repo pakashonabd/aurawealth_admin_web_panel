@@ -60,16 +60,35 @@ class ApiService {
     if (status != null && status.isNotEmpty) {
       url += '?status=$status';
     }
+    
+    print('🌐 API: Fetching admin dashboard from: $url');
+    
     final response = await http.get(
       Uri.parse(url),
       headers: _getHeaders(),
     ).timeout(Duration(seconds: AppConstants.apiTimeout));
+    
+    print('🌐 API: Response status code: ${response.statusCode}');
+    print('🌐 API: Response body length: ${response.body.length}');
+    
     final decoded = _parseResponse(response);
-    if (decoded is List) return decoded;
+    
+    if (decoded is List) {
+      print('🌐 API: Received List with ${decoded.length} items');
+      if (decoded.isNotEmpty) {
+        print('🌐 API: First item keys: ${(decoded.first as Map).keys.toList()}');
+        print('🌐 API: First item sample: ${decoded.first}');
+      }
+      return decoded;
+    }
     // Some backends wrap in a key
     if (decoded is Map && decoded.containsKey('transactions')) {
-      return decoded['transactions'] as List<dynamic>;
+      final txList = decoded['transactions'] as List<dynamic>;
+      print('🌐 API: Received Map with transactions key, count: ${txList.length}');
+      return txList;
     }
+    
+    print('🌐 API: Returning empty list');
     return [];
   }
 

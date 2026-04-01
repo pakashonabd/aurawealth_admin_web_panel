@@ -52,7 +52,17 @@ class _StoreOperationsScreenState extends State<StoreOperationsScreen>
     super.initState();
     _tabController = TabController(length: 2, vsync: this);
     _startTipRotation();
+    
+    print('🏪 StoreOperations: initState - UserController users count: ${_userController.users.length}');
     _filteredUsers = _userController.users;
+    
+    // Listen to user changes
+    ever(_userController.users, (users) {
+      print('🏪 StoreOperations: Users updated, count: ${users.length}');
+      setState(() {
+        _filteredUsers = users;
+      });
+    });
   }
 
   void _startTipRotation() {
@@ -77,19 +87,37 @@ class _StoreOperationsScreenState extends State<StoreOperationsScreen>
   }
 
   void _filterUsers(String query) {
+    print('🔍 StoreOperations: Filtering users with query: "$query"');
+    print('🔍 StoreOperations: Total users available: ${_userController.users.length}');
+    
     setState(() {
       if (query.isEmpty) {
         _filteredUsers = _userController.users;
+        print('🔍 StoreOperations: No filter, showing all ${_filteredUsers.length} users');
       } else {
         _filteredUsers = _userController.users.where((user) {
           final name = (user.name ?? '').toLowerCase();
           final email = (user.email ?? '').toLowerCase();
           final id = user.id.toLowerCase();
           final searchQuery = query.toLowerCase();
-          return name.contains(searchQuery) || 
+          
+          final matches = name.contains(searchQuery) || 
                  email.contains(searchQuery) || 
                  id.contains(searchQuery);
+          
+          if (matches) {
+            print('   ✓ Match: ${user.name ?? user.email} (${user.id})');
+          }
+          
+          return matches;
         }).toList();
+        print('🔍 StoreOperations: Filtered to ${_filteredUsers.length} users');
+      }
+      
+      // Log sample users
+      for (var i = 0; i < _filteredUsers.length && i < 3; i++) {
+        final user = _filteredUsers[i];
+        print('   User $i: name="${user.name}", email="${user.email}", photo="${user.photoUrl}"');
       }
     });
   }
@@ -631,17 +659,13 @@ class _StoreOperationsScreenState extends State<StoreOperationsScreen>
                                                           children: [
                                                             CircleAvatar(
                                                               radius: 18,
-                                                              backgroundColor: AppColors.primary.withOpacity(0.1),
-                                                              backgroundImage: (user.photoUrl != null && user.photoUrl!.isNotEmpty)
-                                                                  ? NetworkImage(user.photoUrl!)
+                                                              backgroundColor: AppColors.primary.withValues(alpha: 0.1),
+                                                              backgroundImage: _getValidImageUrl(user.photoUrl) != null
+                                                                  ? NetworkImage(_getValidImageUrl(user.photoUrl)!)
                                                                   : null,
-                                                              child: (user.photoUrl == null || user.photoUrl!.isEmpty)
+                                                              child: _getValidImageUrl(user.photoUrl) == null
                                                                   ? Text(
-                                                                      (user.name?.isNotEmpty ?? false)
-                                                                          ? user.name![0].toUpperCase()
-                                                                          : (user.email?.isNotEmpty ?? false)
-                                                                              ? user.email![0].toUpperCase()
-                                                                              : 'U',
+                                                                      _getUserInitials(user),
                                                                       style: TextStyle(
                                                                         color: AppColors.primary,
                                                                         fontWeight: FontWeight.bold,
@@ -703,30 +727,56 @@ class _StoreOperationsScreenState extends State<StoreOperationsScreen>
                           ),
                           child: Row(
                             children: [
-                              Icon(
-                                Icons.person_outline,
-                                color: _selectedUserId != null
-                                    ? AppColors.primary
-                                    : AppColors.grey600,
-                              ),
+                              _selectedUser != null
+                                  ? CircleAvatar(
+                                      radius: 18,
+                                      backgroundColor: AppColors.primary.withValues(alpha: 0.1),
+                                      backgroundImage: _getValidImageUrl(_selectedUser!.photoUrl) != null
+                                          ? NetworkImage(_getValidImageUrl(_selectedUser!.photoUrl)!)
+                                          : null,
+                                      child: _getValidImageUrl(_selectedUser!.photoUrl) == null
+                                          ? Text(
+                                              _getUserInitials(_selectedUser!),
+                                              style: TextStyle(
+                                                color: AppColors.primary,
+                                                fontWeight: FontWeight.bold,
+                                                fontSize: 14,
+                                              ),
+                                            )
+                                          : null,
+                                    )
+                                  : Icon(
+                                      Icons.person_outline,
+                                      color: AppColors.grey600,
+                                    ),
                               const SizedBox(width: 12),
                               Expanded(
-                                child: _selectedUserId != null
+                                child: _selectedUser != null
                                     ? Column(
                                         crossAxisAlignment: CrossAxisAlignment.start,
                                         mainAxisSize: MainAxisSize.min,
                                         children: [
                                           Text(
-                                            _selectedUserName ?? '',
+                                            _selectedUser!.name ?? _selectedUser!.email ?? 'User',
                                             style: TextStyle(
                                               fontWeight: FontWeight.w500,
                                               color: AppColors.textPrimary,
                                             ),
+                                            overflow: TextOverflow.ellipsis,
                                           ),
+                                          if (_selectedUser!.email != null && _selectedUser!.name != null)
+                                            Text(
+                                              _selectedUser!.email!,
+                                              style: TextStyle(
+                                                fontSize: 11,
+                                                color: AppColors.grey600,
+                                              ),
+                                              overflow: TextOverflow.ellipsis,
+                                            ),
                                           Text(
-                                            'ID: $_selectedUserId',
+                                            'ID: ${_selectedUser!.id.length > 20 ? _selectedUser!.id.substring(0, 20) + "..." : _selectedUser!.id}',
                                             style: TextStyle(
-                                              fontSize: 12,
+                                              fontSize: 11,
                                               color: AppColors.grey600,
                                             ),
                                           ),
@@ -1237,5 +1287,34 @@ class _StoreOperationsScreenState extends State<StoreOperationsScreen>
         ],
       ),
     );
+  }
+
+  /// Helper method to get valid image URL, filtering out null/empty/invalid URLs
+  String? _getValidImageUrl(String? url) {
+    if (url == null || url.isEmpty || url.contains('null')) {
+      return null;
+    }
+    // Ensure URL is valid
+    try {
+      Uri.parse(url);
+      return url;
+    } catch (_) {
+      return null;
+    }
+  }
+
+  /// Get user initials from name or email for avatar display
+  String _getUserInitials(User user) {
+    if (user.name != null && user.name!.isNotEmpty) {
+      final parts = user.name!.trim().split(' ');
+      if (parts.length > 1) {
+        return '${parts[0][0]}${parts[parts.length - 1][0]}'.toUpperCase();
+      }
+      return user.name![0].toUpperCase();
+    }
+    if (user.email != null && user.email!.isNotEmpty) {
+      return user.email![0].toUpperCase();
+    }
+    return 'U';
   }
 }

@@ -79,6 +79,25 @@ class Transaction {
       if (gross > amountBdt) feeAmount = gross - amountBdt;
     }
 
+    // Extract user information with debug logging
+    final userId = json['user_id']?.toString();
+    final userName = json['user_name']?.toString();
+    final userEmail = json['user_email']?.toString();
+    final userPhoto = json['user_photo']?.toString() ?? 
+                      json['photo_url']?.toString() ?? 
+                      json['profile_photo']?.toString();
+    
+    // Debug log for user data
+    if (userId != null) {
+      print('🔹 Transaction.fromJson - User Data:');
+      print('   Transaction ID: ${json['id']}');
+      print('   user_id: $userId');
+      print('   user_name: $userName');
+      print('   user_email: $userEmail');
+      print('   user_photo: $userPhoto');
+      print('   Available keys in JSON: ${json.keys.toList()}');
+    }
+
     return Transaction(
       id:           json['id']?.toString() ?? '',
       type:         rawType,
@@ -95,10 +114,10 @@ class Transaction {
       paidAt:       _dt(json['paid_at']),
       rejectedAt:   _dt(json['rejected_at']),
       adminNote:    json['admin_note']?.toString(),
-      userId:       json['user_id']?.toString(),
-      userName:     json['user_name']?.toString(),
-      userEmail:    json['user_email']?.toString(),
-      userPhoto:    json['user_photo']?.toString() ?? json['photo_url']?.toString() ?? json['profile_photo']?.toString(),
+      userId:       userId,
+      userName:     userName,
+      userEmail:    userEmail,
+      userPhoto:    userPhoto,
     );
   }
 

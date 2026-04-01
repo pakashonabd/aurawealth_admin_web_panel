@@ -290,7 +290,12 @@ class _UsersScreenState extends State<UsersScreen> {
           mainAxisAlignment: MainAxisAlignment.spaceBetween,
           children: [
             _buildSectionTitle('Recent Users'),
-            TextButton(onPressed: () {}, child: const Text('View All', style: TextStyle(fontSize: 13))),
+            TextButton(
+              onPressed: () {
+                _showAllUsersDialog(controller);
+              },
+              child: const Text('View All', style: TextStyle(fontSize: 13)),
+            ),
           ],
         ),
         const SizedBox(height: 12),
@@ -301,36 +306,20 @@ class _UsersScreenState extends State<UsersScreen> {
           separatorBuilder: (_, __) => const SizedBox(height: 10),
           itemBuilder: (context, index) {
             final user = controller.filteredUsers[index];
+            final userTxs = controller.getUserTransactions(user.id);
+            final totalGrams = userTxs.fold<double>(0, (sum, tx) => sum + tx.grams);
+            
             return Container(
-              padding: const EdgeInsets.all(12),
+              padding: const EdgeInsets.all(14),
               decoration: BoxDecoration(
                 color: Colors.white,
                 borderRadius: BorderRadius.circular(16),
-                boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.01), blurRadius: 10)],
+                boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.02), blurRadius: 10)],
               ),
               child: Row(
                 children: [
-                  CircleAvatar(
-                    radius: 20,
-                    backgroundColor: AppColors.primary.withOpacity(0.1),
-                    backgroundImage: (user.photoUrl != null && user.photoUrl!.isNotEmpty)
-                        ? NetworkImage(user.photoUrl!)
-                        : null,
-                    child: (user.photoUrl == null || user.photoUrl!.isEmpty)
-                        ? Text(
-                            (user.name?.isNotEmpty ?? false)
-                                ? user.name![0].toUpperCase()
-                                : (user.email?.isNotEmpty ?? false)
-                                    ? user.email![0].toUpperCase()
-                                    : 'U',
-                            style: TextStyle(
-                              color: AppColors.primary,
-                              fontWeight: FontWeight.bold,
-                            ),
-                          )
-                        : null,
-                  ),
-                  const SizedBox(width: 12),
+                   _buildUserAvatar(user, radius: 24),
+                  const SizedBox(width: 14),
                   Expanded(
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
@@ -341,7 +330,9 @@ class _UsersScreenState extends State<UsersScreen> {
                             fontWeight: FontWeight.bold,
                             fontSize: 14,
                           ),
+                          overflow: TextOverflow.ellipsis,
                         ),
+                        const SizedBox(height: 2),
                         if (user.email != null && user.name != null)
                           Text(
                             user.email!,
@@ -349,15 +340,15 @@ class _UsersScreenState extends State<UsersScreen> {
                               color: AppColors.grey500,
                               fontSize: 11,
                             ),
-                          )
-                        else
-                          Text(
-                            'Joined ${Formatters.formatDate(user.createdAt)}',
-                            style: TextStyle(
-                              color: AppColors.grey500,
-                              fontSize: 11,
-                            ),
+                            overflow: TextOverflow.ellipsis,
                           ),
+                        Text(
+                          '${userTxs.length} transactions • ${Formatters.formatGrams(totalGrams)}',
+                          style: TextStyle(
+                            color: AppColors.grey600,
+                            fontSize: 11,
+                          ),
+                        ),
                       ],
                     ),
                   ),
@@ -369,5 +360,128 @@ class _UsersScreenState extends State<UsersScreen> {
         ),
       ],
     );
+  }
+
+  void _showAllUsersDialog(UserController controller) {
+    showDialog(
+      context: context,
+      builder: (context) => Dialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+        child: Container(
+          width: 600,
+          height: 600,
+          padding: const EdgeInsets.all(24),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Text(
+                    'All Users',
+                    style: TextStyle(
+                      fontSize: 20,
+                      fontWeight: FontWeight.bold,
+                      color: AppColors.textPrimary,
+                    ),
+                  ),
+                  IconButton(
+                    onPressed: () => Navigator.pop(context),
+                    icon: Icon(Icons.close),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 16),
+              TextField(
+                decoration: InputDecoration(
+                  hintText: 'Search users...',
+                  prefixIcon: Icon(Icons.search),
+                  border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                ),
+                onChanged: (value) => controller.setSearchQuery(value),
+              ),
+              const SizedBox(height: 16),
+              Expanded(
+                child: Obx(() => ListView.separated(
+                  itemCount: controller.filteredUsers.length,
+                  separatorBuilder: (_, __) => const Divider(height: 1),
+                  itemBuilder: (context, index) {
+                    final user = controller.filteredUsers[index];
+                    final userTxs = controller.getUserTransactions(user.id);
+                    final totalGrams = userTxs.fold<double>(0, (sum, tx) => sum + tx.grams);
+                    
+                    return ListTile(
+                      contentPadding: const EdgeInsets.symmetric(horizontal: 8, vertical: 8),
+                       leading: _buildUserAvatar(user, radius: 24),
+                      title: Text(
+                        user.name ?? user.email ?? 'User',
+                        style: const TextStyle(fontWeight: FontWeight.w600),
+                      ),
+                      subtitle: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          if (user.email != null && user.name != null)
+                            Text(user.email!, style: TextStyle(fontSize: 11)),
+                          Text(
+                            '${userTxs.length} txs • ${Formatters.formatGrams(totalGrams)} • ID: ${user.id.substring(0, 8)}...',
+                            style: TextStyle(fontSize: 11, color: AppColors.grey600),
+                          ),
+                        ],
+                      ),
+                      trailing: Icon(Icons.chevron_right),
+                    );
+                  },
+                )),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  /// Helper widget to display user avatar with proper image loading
+  Widget _buildUserAvatar(User user, {double radius = 24}) {
+    final hasValidPhoto = user.photoUrl != null && 
+                         user.photoUrl!.isNotEmpty && 
+                         !user.photoUrl!.contains('null');
+    
+    return CircleAvatar(
+      radius: radius,
+      backgroundColor: AppColors.primary.withValues(alpha: 0.1),
+      backgroundImage: hasValidPhoto ? NetworkImage(user.photoUrl!) : null,
+      onBackgroundImageError: hasValidPhoto
+          ? (exception, stackTrace) {
+              // Image failed to load, will show initials instead
+            }
+          : null,
+      child: !hasValidPhoto
+          ? Text(
+              _getUserInitials(user),
+              style: TextStyle(
+                color: AppColors.primary,
+                fontWeight: FontWeight.bold,
+                fontSize: radius > 20 ? 16 : 12,
+              ),
+            )
+          : null,
+    );
+  }
+
+  /// Get user initials from name or email
+  String _getUserInitials(User user) {
+    if (user.name != null && user.name!.isNotEmpty) {
+      final parts = user.name!.trim().split(' ');
+      if (parts.length > 1) {
+        return '${parts[0][0]}${parts[parts.length - 1][0]}'.toUpperCase();
+      }
+      return user.name![0].toUpperCase();
+    }
+    if (user.email != null && user.email!.isNotEmpty) {
+      return user.email![0].toUpperCase();
+    }
+    return 'U';
   }
 }

@@ -86,16 +86,11 @@ flutter:
 
   # To add assets to your application, add an assets section, like this:
   assets:
-    - assets/
-    - assets/images/
-    - assets/images/wallpaperflare.com_wallpaper.jpg
     - assets/lottie/
+    - assets/images/
     - assets/lottie/Admin Panel.json
     - assets/lottie/Transaction Confirmation.json
     - assets/lottie/website building of shopping sale.json
-    - assets/lottie/Verify.json
-    - assets/lottie/Verified.json
-    - assets/lottie/Verification.json
     - assets/api_documentation/
     - assets/pakashona-mvp-building-guide/
 

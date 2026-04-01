@@ -24,8 +24,17 @@ class UserController extends GetxController {
       isLoading.value = true;
       errorMessage.value = '';
 
+      print('🔍 UserController: Starting to load users...');
+      
       // Get all transactions from admin dashboard
       final transactionsData = await _apiService.getAdminDashboard();
+      print('📦 UserController: Received ${transactionsData.length} transactions from API');
+      
+      // Print first transaction to see structure
+      if (transactionsData.isNotEmpty) {
+        print('📄 UserController: Sample transaction data: ${transactionsData.first}');
+      }
+      
       final transactions = transactionsData
           .map((json) => Transaction.fromJson(json))
           .toList();
@@ -37,6 +46,12 @@ class UserController extends GetxController {
       for (var tx in transactions) {
         if (tx.userId != null) {
           if (!userMap.containsKey(tx.userId)) {
+            print('👤 UserController: Creating user from transaction:');
+            print('   - User ID: ${tx.userId}');
+            print('   - User Name: ${tx.userName}');
+            print('   - User Email: ${tx.userEmail}');
+            print('   - User Photo: ${tx.userPhoto}');
+            
             userMap[tx.userId!] = User(
               id: tx.userId!,
               name: tx.userName,
@@ -59,8 +74,21 @@ class UserController extends GetxController {
 
       users.value = userMap.values.toList();
       userTransactions.value = txByUser;
+      
+      print('✅ UserController: Loaded ${users.length} unique users');
+      print('📊 UserController: Sample users:');
+      for (var i = 0; i < users.length && i < 3; i++) {
+        final user = users[i];
+        print('   User $i:');
+        print('     - ID: ${user.id}');
+        print('     - Name: ${user.name}');
+        print('     - Email: ${user.email}');
+        print('     - Photo: ${user.photoUrl}');
+      }
+      
       applyFilters();
     } catch (e) {
+      print('❌ UserController Error: $e');
       errorMessage.value = e.toString().replaceAll('Exception: ', '');
     } finally {
       isLoading.value = false;

@@ -42,13 +42,28 @@ class User {
     } catch (_) {
       createdAt = DateTime.now();
     }
+    
+    final id = json['id']?.toString() ?? json['user_id']?.toString() ?? '';
+    final name = json['name']?.toString() ?? json['user_name']?.toString();
+    final email = json['email']?.toString() ?? json['user_email']?.toString();
+    final photoUrl = json['photo_url']?.toString() ?? 
+                     json['profile_photo']?.toString() ?? 
+                     json['user_photo']?.toString();
+    
+    print('🔸 User.fromJson:');
+    print('   ID: $id');
+    print('   Name: $name');
+    print('   Email: $email');
+    print('   PhotoUrl: $photoUrl');
+    print('   JSON keys: ${json.keys.toList()}');
+    
     return User(
-      id: json['id']?.toString() ?? json['user_id']?.toString() ?? '',
+      id: id,
       firebaseUid: json['firebase_uid']?.toString(),
-      name: json['name']?.toString() ?? json['user_name']?.toString(),
-      email: json['email']?.toString() ?? json['user_email']?.toString(),
+      name: name,
+      email: email,
       phoneNumber: json['phone_number']?.toString(),
-      photoUrl: json['photo_url']?.toString() ?? json['profile_photo']?.toString() ?? json['user_photo']?.toString(),
+      photoUrl: photoUrl,
       createdAt: createdAt,
       phoneVerified: json['phone_verified'] == true || json['phone_verified'] == 1,
       kycStatus: json['kyc_status']?.toString() ?? 'pending',
