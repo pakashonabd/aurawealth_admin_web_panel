@@ -226,6 +226,10 @@ class MainContainer extends StatelessWidget {
         if (!Get.isRegistered<NotificationController>()) {
           Get.lazyPut<NotificationController>(() => NotificationController());
         }
+        // Initialize UserController as it's required by NotificationsScreen
+        if (!Get.isRegistered<UserController>()) {
+          Get.lazyPut<UserController>(() => UserController());
+        }
         return NotificationsScreen();
 
       case AppRoutes.storeOperations:
