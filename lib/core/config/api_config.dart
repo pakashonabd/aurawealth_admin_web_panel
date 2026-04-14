@@ -12,10 +12,9 @@ class ApiConfig {
     return '$baseUrl/ws/admin/chat/$userId?token=$adminToken';
   }
 
-  /// Get admin chat history
-  /// GET /admin/chat/history/{user_id}?limit=50&offset=0
+  /// Get admin chat history — explicit limit=1000 to override server default of 50
   static String adminChatHistoryUrl(String userId) {
-    return '${AppConstants.baseUrl}/admin/chat/history/$userId?limit=50&offset=0';
+    return '${AppConstants.baseUrl}/admin/chat/history/$userId?limit=1000';
   }
 
   /// Send message to user (REST fallback)
