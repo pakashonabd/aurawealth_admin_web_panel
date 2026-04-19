@@ -54,11 +54,11 @@ class _SidebarMenuState extends State<SidebarMenu> with SingleTickerProviderStat
       icon: Icons.dashboard_outlined,
       route: AppRoutes.dashboard,
     ),
-    // MenuItem(
-    //   title: 'Transactions',
-    //   icon: Icons.receipt_long_outlined,
-    //   route: AppRoutes.transactions,
-    // ),
+    MenuItem(
+      title: 'Transactions',
+      icon: Icons.receipt_long_outlined,
+      route: AppRoutes.transactions,
+    ),
     // MenuItem(
     //   title: 'Users',
     //   icon: Icons.people_outline,
