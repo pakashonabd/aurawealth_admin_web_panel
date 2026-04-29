@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:flutter_animate/flutter_animate.dart';
-import 'package:shimmer/shimmer.dart';
 import '../../core/constants/app_colors.dart';
 import '../../core/constants/app_constants.dart';
 import '../../core/utils/responsive.dart';
@@ -13,7 +12,6 @@ class MenuItem {
   final IconData icon;
   final String route;
   final IconData? badge;
-
   MenuItem({
     required this.title,
     required this.icon,
@@ -59,11 +57,11 @@ class _SidebarMenuState extends State<SidebarMenu> with SingleTickerProviderStat
       icon: Icons.receipt_long_outlined,
       route: AppRoutes.transactions,
     ),
-    // MenuItem(
-    //   title: 'Users',
-    //   icon: Icons.people_outline,
-    //   route: AppRoutes.users,
-    // ),
+    MenuItem(
+      title: 'Users',
+      icon: Icons.people_outline,
+      route: AppRoutes.users,
+    ),
     MenuItem(
       title: 'Gold Management',
       icon: Icons.trending_up_outlined,
