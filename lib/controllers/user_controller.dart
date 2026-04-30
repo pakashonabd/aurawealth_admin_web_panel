@@ -87,6 +87,8 @@ class UserController extends GetxController {
       }
       
       applyFilters();
+    } on SessionExpiredException {
+      return;
     } catch (e) {
       print('❌ UserController Error: $e');
       errorMessage.value = e.toString().replaceAll('Exception: ', '');

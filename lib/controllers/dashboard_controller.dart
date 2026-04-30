@@ -77,6 +77,8 @@ class DashboardController extends GetxController {
       _updatePagedTransactions();
       pendingTransactions.value = all.where((t) => t.status == 'PENDING').toList();
 
+    } on SessionExpiredException {
+      return;
     } catch (e) {
       errorMessage.value = e.toString().replaceAll('Exception: ', '');
     } finally {

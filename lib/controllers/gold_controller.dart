@@ -23,6 +23,8 @@ class GoldController extends GetxController {
 
       final data = await _apiService.getGoldPrice();
       currentPrice.value = GoldPrice.fromJson(data);
+    } on SessionExpiredException {
+      return;
     } catch (e) {
       errorMessage.value = e.toString().replaceAll('Exception: ', '');
     } finally {
@@ -39,6 +41,8 @@ class GoldController extends GetxController {
       currentPrice.value = GoldPrice.fromJson(data);
       
       Get.snackbar('Success', 'Gold price updated successfully');
+    } on SessionExpiredException {
+      return;
     } catch (e) {
       errorMessage.value = e.toString().replaceAll('Exception: ', '');
       Get.snackbar('Error', errorMessage.value);

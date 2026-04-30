@@ -1,8 +1,17 @@
 import 'dart:convert';
+import 'package:get/get.dart';
 import 'package:http/http.dart' as http;
 import '../core/constants/app_constants.dart';
 import '../core/constants/api_endpoints.dart';
+import '../routes/app_routes.dart';
 import 'storage_service.dart';
+
+class SessionExpiredException implements Exception {
+  final String message;
+  const SessionExpiredException([this.message = 'Session expired']);
+  @override
+  String toString() => message;
+}
 
 class ApiService {
   static final ApiService _instance = ApiService._internal();
@@ -10,6 +19,7 @@ class ApiService {
   ApiService._internal();
 
   final StorageService _storage = StorageService();
+  bool _isLoggingOut = false;
 
   Map<String, String> _getHeaders({bool isFormData = false}) {
     final headers = <String, String>{};
@@ -25,11 +35,30 @@ class ApiService {
     return headers;
   }
 
-  // Returns decoded body or throws — NOT async so callers get a real value
+  Future<void> _handleSessionExpired() async {
+    if (_isLoggingOut) return;
+    _isLoggingOut = true;
+    try {
+      await _storage.clearAll();
+      Get.offAllNamed(AppRoutes.login);
+      Get.snackbar(
+        'Session Expired',
+        'Your session has expired. Please log in again.',
+        snackPosition: SnackPosition.TOP,
+        duration: const Duration(seconds: 3),
+      );
+    } finally {
+      _isLoggingOut = false;
+    }
+  }
+
   dynamic _parseResponse(http.Response response) {
     if (response.statusCode >= 200 && response.statusCode < 300) {
       if (response.body.isEmpty) return <String, dynamic>{'success': true};
       return json.decode(response.body);
+    } else if (response.statusCode == 401) {
+      _handleSessionExpired();
+      throw SessionExpiredException();
     } else {
       String errorMessage = 'An error occurred';
       try {

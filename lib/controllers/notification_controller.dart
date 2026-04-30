@@ -60,6 +60,8 @@ class NotificationController extends GetxController {
       totalDevices.value = response['total'] ?? deviceList.length;
 
       devices.value = deviceList.map((json) => Device.fromJson(json)).toList();
+    } on SessionExpiredException {
+      return;
     } catch (e) {
       errorMessage.value = e.toString().replaceAll('Exception: ', '');
     } finally {
@@ -71,8 +73,9 @@ class NotificationController extends GetxController {
     try {
       final response = await _apiService.getDeviceStats();
       deviceStats.value = DeviceStats.fromJson(response);
+    } on SessionExpiredException {
+      return;
     } catch (e) {
-      print('Error loading device stats: $e');
     }
   }
 
@@ -106,6 +109,8 @@ class NotificationController extends GetxController {
             );
 
       return NotificationResponse.fromJson(response);
+    } on SessionExpiredException {
+      return null;
     } catch (e) {
       errorMessage.value = e.toString().replaceAll('Exception: ', '');
       return null;
@@ -138,6 +143,8 @@ class NotificationController extends GetxController {
             );
 
       return NotificationResponse.fromJson(response);
+    } on SessionExpiredException {
+      return null;
     } catch (e) {
       errorMessage.value = e.toString().replaceAll('Exception: ', '');
       return null;
@@ -152,6 +159,8 @@ class NotificationController extends GetxController {
       devices.removeWhere((d) => d.id == deviceId);
       await loadDeviceStats();
       return true;
+    } on SessionExpiredException {
+      return false;
     } catch (e) {
       errorMessage.value = e.toString().replaceAll('Exception: ', '');
       return false;

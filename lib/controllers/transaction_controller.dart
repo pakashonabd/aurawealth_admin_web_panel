@@ -38,6 +38,8 @@ class TransactionController extends GetxController {
       all.sort((a, b) => b.createdAt.compareTo(a.createdAt));
       transactions.value = all;
       applyFilters();
+    } on SessionExpiredException {
+      return;
     } catch (e) {
       errorMessage.value = e.toString().replaceAll('Exception: ', '');
     } finally {
@@ -48,21 +50,18 @@ class TransactionController extends GetxController {
   void applyFilters() {
     var filtered = transactions.toList();
 
-    // Status — model stores UPPERCASE
     if (selectedStatus.value.isNotEmpty) {
       filtered = filtered
           .where((t) => t.status == selectedStatus.value.toUpperCase())
           .toList();
     }
 
-    // Type — model stores UPPERCASE
     if (selectedType.value.isNotEmpty) {
       filtered = filtered
           .where((t) => t.type == selectedType.value.toUpperCase())
           .toList();
     }
 
-    // Date range
     if (startDate.value != null) {
       filtered = filtered
           .where((t) => !t.createdAt.isBefore(startDate.value!))
@@ -75,7 +74,6 @@ class TransactionController extends GetxController {
           .toList();
     }
 
-    // Search
     if (searchQuery.value.isNotEmpty) {
       final q = searchQuery.value.toLowerCase();
       filtered = filtered.where((t) =>
@@ -125,6 +123,8 @@ class TransactionController extends GetxController {
       Get.snackbar('Success', 'Transaction approved successfully',
           snackPosition: SnackPosition.TOP);
       loadTransactions();
+    } on SessionExpiredException {
+      return;
     } catch (e) {
       Get.snackbar('Error', e.toString().replaceAll('Exception: ', ''),
           snackPosition: SnackPosition.TOP);
@@ -137,6 +137,8 @@ class TransactionController extends GetxController {
       Get.snackbar('Success', 'Transaction rejected successfully',
           snackPosition: SnackPosition.TOP);
       loadTransactions();
+    } on SessionExpiredException {
+      return;
     } catch (e) {
       Get.snackbar('Error', e.toString().replaceAll('Exception: ', ''),
           snackPosition: SnackPosition.TOP);
