@@ -284,11 +284,7 @@ class _DesktopLayout extends StatelessWidget {
               Expanded(
                 child: filtered.isEmpty
                     ? const _EmptyView()
-                    : _DesktopTable(transactions: filtered, ctrl: ctrl)
-                        .animate()
-                        .fadeIn(delay: 400.ms, duration: 900.ms, curve: Curves.easeInOutCubicEmphasized)
-                        .slideY(delay: 400.ms, begin: 0.06, end: 0, duration: 900.ms, curve: Curves.easeInOutCubicEmphasized)
-                        .scaleXY(delay: 400.ms, begin: 0.97, end: 1.0, duration: 900.ms, curve: Curves.easeInOutCubicEmphasized),
+                    : _DesktopTable(transactions: filtered, ctrl: ctrl),
               ),
             ],
           ),
@@ -1042,14 +1038,21 @@ class _DesktopTable extends StatelessWidget {
           _TableHeader(),
           const Divider(height: 1, color: _border),
           Expanded(
-            child: ListView.separated(
+            child: ListView.builder(
               itemCount: transactions.length,
-              separatorBuilder: (_, __) =>
-              const Divider(height: 1, color: _border),
-              itemBuilder: (_, i) => _TableRow(
-                tx: transactions[i],
-                odd: i.isOdd,
-                ctrl: ctrl,
+              addAutomaticKeepAlives: false,
+              addRepaintBoundaries: true,
+              itemBuilder: (_, i) => Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  if (i > 0) const Divider(height: 1, color: _border),
+                  _TableRow(
+                    tx: transactions[i],
+                    odd: i.isOdd,
+                    ctrl: ctrl,
+                    index: i,
+                  ),
+                ],
               ),
             ),
           ),
@@ -1085,7 +1088,9 @@ class _TableHeader extends StatelessWidget {
         SizedBox(width: 16),
       ]),
     ),
-  );
+  ).animate()
+    .fadeIn(delay: 100.ms, duration: 200.ms, curve: Curves.easeOutCubic)
+    .slideY(delay: 100.ms, begin: 0.04, end: 0, duration: 200.ms, curve: Curves.easeOutCubic);
 }
 
 class _TH extends StatelessWidget {
@@ -1105,11 +1110,13 @@ class _TableRow extends StatelessWidget {
   final Transaction tx;
   final bool odd;
   final TransactionController ctrl;
-  const _TableRow({required this.tx, required this.odd, required this.ctrl});
+  final int index;
+  const _TableRow({required this.tx, required this.odd, required this.ctrl, required this.index});
 
   @override
   Widget build(BuildContext context) {
     final tc = _typeColor(tx.type);
+    final delay = Duration(milliseconds: 150 + index * 15);
     return InkWell(
       onTap: () => _showDetailSheet(context, tx, ctrl),
       hoverColor: const Color(0xFFF0F4FF),
@@ -1209,12 +1216,14 @@ class _TableRow extends StatelessWidget {
             child: tx.status.toLowerCase() == 'pending'
                 ? _ActionButtons(tx: tx, ctrl: ctrl)
                 : const SizedBox.shrink(),
-          ),
+           ),
           const SizedBox(width: 16),
         ]),
         ),
       ),
-    );
+    ).animate()
+      .fadeIn(delay: delay, duration: 200.ms, curve: Curves.easeOutCubic)
+      .slideY(delay: delay, begin: 0.04, end: 0, duration: 200.ms, curve: Curves.easeOutCubic);
   }
 }
 

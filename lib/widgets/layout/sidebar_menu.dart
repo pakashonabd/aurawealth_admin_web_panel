@@ -77,11 +77,11 @@ class _SidebarMenuState extends State<SidebarMenu> with SingleTickerProviderStat
       icon: Icons.notifications_active_outlined,
       route: AppRoutes.notifications,
     ),
-    // MenuItem(
-    //   title: 'Store Operations',
-    //   icon: Icons.store_outlined,
-    //   route: AppRoutes.storeOperations,
-    // ),
+    MenuItem(
+      title: 'Store Operations',
+      icon: Icons.store_outlined,
+      route: AppRoutes.storeOperations,
+    ),
   ];
 
   @override
