@@ -40,6 +40,11 @@ dependencies:
   
   # HTTP Client
   http: ^1.2.0
+
+  # Firebase realtime chat + push notifications
+  firebase_core: ^3.8.1
+  cloud_firestore: ^5.5.2
+  firebase_messaging: ^15.1.6
   
   # WebSocket Client
   web_socket_channel: ^3.0.3

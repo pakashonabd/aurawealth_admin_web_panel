@@ -1,12 +1,13 @@
+import 'dart:async';
 import 'package:get/get.dart';
 import '../models/message.dart';
 import '../models/message_thread.dart';
 import '../models/user.dart';
-import '../services/api_service.dart';
+import '../services/firestore_admin_chat_service.dart';
 import 'user_controller.dart';
 
 class MessageController extends GetxController {
-  final ApiService _apiService = ApiService();
+  final FirestoreAdminChatService _chatService = FirestoreAdminChatService();
 
   final RxBool isLoading = false.obs;
   final RxString errorMessage = ''.obs;
@@ -15,11 +16,20 @@ class MessageController extends GetxController {
   final RxString selectedUserId = ''.obs;
   final RxBool isSendingMessage = false.obs;
 
+  StreamSubscription<List<MessageThread>>? _threadsSub;
+
   @override
   void onInit() {
     super.onInit();
     _ensureUserController();
     loadMessageThreads();
+    _subscribeThreads();
+  }
+
+  @override
+  void onClose() {
+    _threadsSub?.cancel();
+    super.onClose();
   }
 
   UserController? _ensureUserController() {
@@ -46,7 +56,7 @@ class MessageController extends GetxController {
         currentName == 'demo user';
 
     return thread.copyWith(
-      userId: user.firebaseUid ?? thread.userId,
+      userId: user.backendId ?? thread.userId,
       userName: shouldReplaceName ? user.displayName : thread.userName,
       userEmail: thread.userEmail ?? user.email,
       phoneNumber: thread.phoneNumber ?? user.phoneNumber,
@@ -90,24 +100,27 @@ class MessageController extends GetxController {
     return user?.photoUrl ?? thread.photoUrl;
   }
 
+  void _subscribeThreads() {
+    _threadsSub?.cancel();
+    _threadsSub = _chatService.watchThreads().listen(
+      (threads) async {
+        await _ensureUsersLoaded();
+        messageThreads.assignAll(threads.map(_enrichThread).toList());
+      },
+      onError: (e) {
+        errorMessage.value = e.toString().replaceAll('Exception: ', '');
+      },
+    );
+  }
+
   Future<void> loadMessageThreads() async {
     try {
       isLoading.value = true;
       errorMessage.value = '';
 
       await _ensureUsersLoaded();
-      final data = await _apiService.getAdminChatInbox();
-      final threads = data
-          .map((json) => MessageThread.fromJson(json))
-          .map(_enrichThread)
-          .toList();
-      messageThreads.value = threads;
-
-      for (final thread in threads) {
-        print(
-          '💬 Message thread user=${thread.userId} name=${thread.userName} image=${thread.photoUrl ?? '<none>'}',
-        );
-      }
+      final threads = await _chatService.loadThreads();
+      messageThreads.assignAll(threads.map(_enrichThread).toList());
     } catch (e) {
       errorMessage.value = e.toString().replaceAll('Exception: ', '');
     } finally {
@@ -121,10 +134,8 @@ class MessageController extends GetxController {
       errorMessage.value = '';
       selectedUserId.value = userId;
 
-      final data = await _apiService.getAdminChatHistory(userId);
-      currentThreadMessages.value = data
-          .map((json) => Message.fromJson(json))
-          .toList();
+      currentThreadMessages.value = await _chatService.loadRecentMessages(userId);
+      await _chatService.markUserMessagesRead(userId);
     } catch (e) {
       errorMessage.value = e.toString().replaceAll('Exception: ', '');
     } finally {
@@ -137,15 +148,11 @@ class MessageController extends GetxController {
       isSendingMessage.value = true;
       errorMessage.value = '';
 
-      await _apiService.sendAdminChatMessage(
-        userId,
-        message,
+      await _chatService.sendAdminMessage(
+        userId: userId,
+        content: message,
         messageType: 'live',
       );
-
-      // Reload messages to show the new reply
-      await loadUserMessages(userId);
-      await loadMessageThreads(); // Update unread counts
 
       Get.snackbar('Success', 'Reply sent successfully');
     } catch (e) {

@@ -1,6 +1,7 @@
 import 'package:get/get.dart';
 import '../services/api_service.dart';
 import '../services/storage_service.dart';
+import '../services/admin_fcm_service.dart';
 import '../routes/app_routes.dart';
 
 class AuthController extends GetxController {
@@ -33,6 +34,7 @@ class AuthController extends GetxController {
         await _storage.saveAuthToken(token);
         await _storage.saveUserEmail(email);
         isAuthenticated.value = true;
+        await AdminFcmService.initialize();
         
         Get.offAllNamed(AppRoutes.dashboard);
       } else {
