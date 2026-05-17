@@ -43,7 +43,10 @@ class AdminChatController extends GetxController {
   Future<void> reloadHistory() async {
     isLoadingHistory.value = true;
     try {
-      final loaded = await _chatService.loadRecentMessages(targetUserId, limit: 1000);
+      final loaded = await _chatService.loadRecentMessages(
+        targetUserId,
+        limit: 1000,
+      );
       _setMessages(loaded);
       _recomputeUnread();
       _log('Firestore history loaded: ${loaded.length} messages');
@@ -57,18 +60,20 @@ class AdminChatController extends GetxController {
 
   void _subscribe() {
     _messagesSub?.cancel();
-    _messagesSub = _chatService.watchMessages(targetUserId).listen(
-      (incoming) {
-        isConnected.value = true;
-        _setMessages(incoming);
-        _recomputeUnread();
-        unawaited(_chatService.markUserMessagesRead(targetUserId));
-      },
-      onError: (e) {
-        isConnected.value = false;
-        _log('Firestore stream error: $e');
-      },
-    );
+    _messagesSub = _chatService
+        .watchMessages(targetUserId)
+        .listen(
+          (incoming) {
+            isConnected.value = true;
+            _setMessages(incoming);
+            _recomputeUnread();
+            unawaited(_chatService.markUserMessagesRead(targetUserId));
+          },
+          onError: (e) {
+            isConnected.value = false;
+            _log('Firestore stream error: $e');
+          },
+        );
   }
 
   Future<void> sendMessage({
@@ -81,7 +86,8 @@ class AdminChatController extends GetxController {
       Get.snackbar('Validation', 'Message body cannot be empty');
       return;
     }
-    if (messageType == 'static' && (subject == null || subject.trim().isEmpty)) {
+    if (messageType == 'static' &&
+        (subject == null || subject.trim().isEmpty)) {
       Get.snackbar('Validation', 'Subject is required for formal messages');
       return;
     }
@@ -96,8 +102,11 @@ class AdminChatController extends GetxController {
       );
     } catch (e) {
       _log('sendMessage failed: $e');
-      Get.snackbar('Error', 'Failed to send message: $e',
-          duration: const Duration(seconds: 3));
+      Get.snackbar(
+        'Error',
+        'Failed to send message: $e',
+        duration: const Duration(seconds: 3),
+      );
     } finally {
       isSending.value = false;
     }
@@ -127,7 +136,9 @@ class AdminChatController extends GetxController {
   void clearUnreadCount() => unreadCount.value = 0;
 
   void _log(String msg) {
-    final prefix = targetUserId.length >= 8 ? targetUserId.substring(0, 8) : targetUserId;
+    final prefix = targetUserId.length >= 8
+        ? targetUserId.substring(0, 8)
+        : targetUserId;
     // ignore: avoid_print
     print('[AdminChat:$prefix] $msg');
   }

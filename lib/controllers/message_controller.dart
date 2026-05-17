@@ -17,6 +17,7 @@ class MessageController extends GetxController {
   final RxBool isSendingMessage = false.obs;
 
   StreamSubscription<List<MessageThread>>? _threadsSub;
+  StreamSubscription<List<Message>>? _currentMessagesSub;
 
   @override
   void onInit() {
@@ -29,6 +30,7 @@ class MessageController extends GetxController {
   @override
   void onClose() {
     _threadsSub?.cancel();
+    _currentMessagesSub?.cancel();
     super.onClose();
   }
 
@@ -134,11 +136,23 @@ class MessageController extends GetxController {
       errorMessage.value = '';
       selectedUserId.value = userId;
 
-      currentThreadMessages.value = await _chatService.loadRecentMessages(userId);
+      await _currentMessagesSub?.cancel();
+      _currentMessagesSub = _chatService
+          .watchMessages(userId)
+          .listen(
+            (messages) {
+              currentThreadMessages.assignAll(messages);
+              unawaited(_chatService.markUserMessagesRead(userId));
+              isLoading.value = false;
+            },
+            onError: (e) {
+              errorMessage.value = e.toString().replaceAll('Exception: ', '');
+              isLoading.value = false;
+            },
+          );
       await _chatService.markUserMessagesRead(userId);
     } catch (e) {
       errorMessage.value = e.toString().replaceAll('Exception: ', '');
-    } finally {
       isLoading.value = false;
     }
   }
@@ -163,6 +177,7 @@ class MessageController extends GetxController {
     }
   }
 
+  @override
   void refresh() {
     if (selectedUserId.value.isNotEmpty) {
       loadUserMessages(selectedUserId.value);

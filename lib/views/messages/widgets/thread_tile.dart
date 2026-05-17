@@ -129,7 +129,7 @@ class ThreadTile extends StatelessWidget {
     final isNew = !Get.isRegistered<AdminChatController>(tag: thread.userId);
 
     if (isNew) {
-      // First visit: create controller — onInit() will load history + open WS
+      // First visit: create controller — onInit() will load history and attach the Firestore stream
       Get.put(
         AdminChatController(targetUserId: thread.userId),
         tag: thread.userId,
@@ -137,7 +137,7 @@ class ThreadTile extends StatelessWidget {
       );
     } else {
       // Returning visit: controller already alive but history may be stale.
-      // Always reload from HTTP so chat body is as fresh as the thread card.
+      // Refresh from Firestore so chat body is as fresh as the thread card.
       final adminChat = Get.find<AdminChatController>(tag: thread.userId);
       adminChat.reloadHistory();
     }
