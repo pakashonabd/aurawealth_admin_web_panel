@@ -58,7 +58,10 @@ class MessageController extends GetxController {
         currentName == 'demo user';
 
     return thread.copyWith(
-      userId: user.backendId ?? thread.userId,
+      // Keep the Firestore chat document id as the conversation id. Replacing
+      // it with the backend/PostgreSQL id makes the UI subscribe to
+      // chat/{backendId}/messages instead of the real chat/{firebaseUid}/...
+      userId: thread.userId.isNotEmpty ? thread.userId : user.id,
       userName: shouldReplaceName ? user.displayName : thread.userName,
       userEmail: thread.userEmail ?? user.email,
       phoneNumber: thread.phoneNumber ?? user.phoneNumber,

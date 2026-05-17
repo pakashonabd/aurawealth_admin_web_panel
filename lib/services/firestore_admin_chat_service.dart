@@ -10,17 +10,17 @@ class FirestoreAdminChatService {
   final FirebaseFirestore _firestore;
 
   CollectionReference<Map<String, dynamic>> _messagesRef(String userId) =>
-      _firestore.collection('chats').doc(userId).collection('messages');
+      _firestore.collection('chat').doc(userId).collection('messages');
 
   CollectionReference<Map<String, dynamic>> _mailsRef(String userId) =>
-      _firestore.collection('chats').doc(userId).collection('mails');
+      _firestore.collection('chat').doc(userId).collection('mails');
 
   DocumentReference<Map<String, dynamic>> _chatRef(String userId) =>
-      _firestore.collection('chats').doc(userId);
+      _firestore.collection('chat').doc(userId);
 
   Stream<List<MessageThread>> watchThreads() {
     return _firestore
-        .collection('chats')
+        .collection('chat')
         .orderBy('lastMessageAt', descending: true)
         .snapshots()
         .map((snapshot) => snapshot.docs.map(_threadFromDoc).toList());
@@ -28,58 +28,78 @@ class FirestoreAdminChatService {
 
   Future<List<MessageThread>> loadThreads() async {
     final snapshot = await _firestore
-        .collection('chats')
+        .collection('chat')
         .orderBy('lastMessageAt', descending: true)
         .get();
     return snapshot.docs.map(_threadFromDoc).toList();
   }
 
   Stream<List<Message>> watchMessages(String userId) {
-    return _messagesRef(userId)
-        .orderBy('createdAt', descending: false)
-        .limitToLast(1000)
-        .snapshots()
-        .map(
-          (snapshot) => snapshot.docs
+    return _messagesRef(userId).limit(1000).snapshots().map((snapshot) {
+      // ignore: avoid_print
+      print(
+        '[FirestoreAdminChatService] watchMessages chat/$userId/messages '
+        'returned ${snapshot.docs.length} docs',
+      );
+      final messages =
+          snapshot.docs
               .map((doc) => messageFromFirestore(doc.id, doc.data()))
-              .toList(),
-        );
+              .toList()
+            ..sort((a, b) => a.createdAt.compareTo(b.createdAt));
+      return messages;
+    });
   }
 
   Stream<List<Message>> watchMails(String userId) {
-    return _mailsRef(userId)
-        .orderBy('timestamp', descending: false)
-        .limitToLast(1000)
-        .snapshots()
-        .map(
-          (snapshot) => snapshot.docs
+    return _mailsRef(userId).limit(1000).snapshots().map((snapshot) {
+      // ignore: avoid_print
+      print(
+        '[FirestoreAdminChatService] watchMails chat/$userId/mails '
+        'returned ${snapshot.docs.length} docs',
+      );
+      final mails =
+          snapshot.docs
               .map((doc) => mailFromFirestore(doc.id, doc.data()))
-              .toList(),
-        );
+              .toList()
+            ..sort((a, b) => a.createdAt.compareTo(b.createdAt));
+      return mails;
+    });
   }
 
   Future<List<Message>> loadRecentMessages(
     String userId, {
     int limit = 1000,
   }) async {
-    final snapshot = await _messagesRef(
-      userId,
-    ).orderBy('createdAt', descending: false).limitToLast(limit).get();
-    return snapshot.docs
-        .map((doc) => messageFromFirestore(doc.id, doc.data()))
-        .toList();
+    final snapshot = await _messagesRef(userId).limit(limit).get();
+    // ignore: avoid_print
+    print(
+      '[FirestoreAdminChatService] loadRecentMessages chat/$userId/messages '
+      'returned ${snapshot.docs.length} docs',
+    );
+    final messages =
+        snapshot.docs
+            .map((doc) => messageFromFirestore(doc.id, doc.data()))
+            .toList()
+          ..sort((a, b) => a.createdAt.compareTo(b.createdAt));
+    return messages;
   }
 
   Future<List<Message>> loadMailHistory(
     String userId, {
     int limit = 1000,
   }) async {
-    final snapshot = await _mailsRef(
-      userId,
-    ).orderBy('timestamp', descending: false).limitToLast(limit).get();
-    return snapshot.docs
-        .map((doc) => mailFromFirestore(doc.id, doc.data()))
-        .toList();
+    final snapshot = await _mailsRef(userId).limit(limit).get();
+    // ignore: avoid_print
+    print(
+      '[FirestoreAdminChatService] loadMailHistory chat/$userId/mails '
+      'returned ${snapshot.docs.length} docs',
+    );
+    final mails =
+        snapshot.docs
+            .map((doc) => mailFromFirestore(doc.id, doc.data()))
+            .toList()
+          ..sort((a, b) => a.createdAt.compareTo(b.createdAt));
+    return mails;
   }
 
   Future<Message> sendAdminMessage({
@@ -185,7 +205,11 @@ class FirestoreAdminChatService {
               DateTime.now();
 
     return MessageThread(
-      userId: (data['userId'] as String?) ?? doc.id,
+      // The parent chat document id is the path segment used for
+      // chat/{userId}/messages and chat/{userId}/mails. Do not prefer a
+      // stored userId field here because older documents may contain a backend
+      // id and that makes the UI subscribe to the wrong subcollections.
+      userId: doc.id,
       userName: (data['userName'] as String?) ?? 'User',
       userEmail: data['userEmail'] as String?,
       phoneNumber: data['phoneNumber'] as String?,
@@ -196,18 +220,31 @@ class FirestoreAdminChatService {
     );
   }
 
+  String? _timestampToIso(dynamic timestamp, {String? fallback}) {
+    if (timestamp is Timestamp) {
+      return timestamp.toDate().toUtc().toIso8601String();
+    }
+    final parsed = DateTime.tryParse(timestamp?.toString() ?? '');
+    if (parsed != null) return parsed.toUtc().toIso8601String();
+    final fallbackParsed = DateTime.tryParse(fallback ?? '');
+    if (fallbackParsed != null) return fallbackParsed.toUtc().toIso8601String();
+    return null;
+  }
+
   Message messageFromFirestore(String id, Map<String, dynamic> data) {
     final senderRole = data['senderRole'] as String? ?? 'user';
-    final timestamp = data['createdAt'];
-    final createdAt = timestamp is Timestamp
-        ? timestamp.toDate().toUtc().toIso8601String()
-        : (data['created_at'] as String? ??
-              DateTime.now().toUtc().toIso8601String());
+    final createdAt =
+        _timestampToIso(
+          data['createdAt'] ?? data['timestamp'] ?? data['created_at'],
+          fallback: data['updatedAt']?.toString(),
+        ) ??
+        DateTime.now().toUtc().toIso8601String();
 
     return Message(
       id: (data['id'] as String?) ?? id,
       direction: senderRole == 'admin' ? 'admin_to_user' : 'user_to_admin',
-      messageType: (data['type'] as String?) ?? 'live',
+      messageType:
+          ((data['type'] ?? data['message_type']) as String?) ?? 'live',
       subject: data['subject'] as String?,
       body: (data['content'] as String?) ?? (data['body'] as String? ?? ''),
       attachmentUrl:
@@ -221,13 +258,9 @@ class FirestoreAdminChatService {
 
   Message mailFromFirestore(String id, Map<String, dynamic> data) {
     final senderRole = data['senderRole'] as String? ?? 'user';
-    final timestamp = data['timestamp'];
-    final createdAt = timestamp is Timestamp
-        ? timestamp.toDate().toUtc().toIso8601String()
-        : DateTime.tryParse(
-                timestamp?.toString() ?? '',
-              )?.toUtc().toIso8601String() ??
-              DateTime.now().toUtc().toIso8601String();
+    final createdAt =
+        _timestampToIso(data['timestamp'] ?? data['createdAt']) ??
+        DateTime.now().toUtc().toIso8601String();
 
     return Message(
       id: (data['id'] as String?) ?? id,

@@ -124,8 +124,7 @@ class ConversationHeader extends StatelessWidget {
                 borderRadius: BorderRadius.circular(10),
               ),
             ),
-            onPressed: () =>
-                controller.loadUserMessages(controller.selectedUserId.value),
+            onPressed: () => adminChat.reloadHistory(),
           ),
         ],
       ),
