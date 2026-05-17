@@ -10,7 +10,7 @@ import 'services/admin_fcm_service.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
-  
+
   // Initialize storage service
   await StorageService().init();
 
@@ -24,7 +24,7 @@ void main() async {
   if (StorageService().isAuthenticated) {
     await AdminFcmService.initialize();
   }
-  
+
   runApp(const MyApp());
 }
 
@@ -34,8 +34,8 @@ class MyApp extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final storage = StorageService();
-    final initialRoute = storage.isAuthenticated 
-        ? AppRoutes.dashboard 
+    final initialRoute = storage.isAuthenticated
+        ? AppRoutes.dashboard
         : AppRoutes.login;
 
     return GetMaterialApp(
@@ -46,5 +46,4 @@ class MyApp extends StatelessWidget {
       getPages: AppPages.routes,
     );
   }
-
 }

@@ -1,3 +1,5 @@
+// ignore_for_file: avoid_print
+
 import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:get/get.dart';
 import '../core/constants/app_constants.dart';
@@ -20,7 +22,11 @@ class AdminFcmService {
       );
       print('[AdminFCM] Permission: ${settings.authorizationStatus}');
 
-      final token = await _messaging.getToken();
+      final token = await FirebaseMessaging.instance.getToken(
+        vapidKey:
+            'BDUiGW559E7LUJ5PZMIcvJxBAmwpPEpCRfu3Emj8Xg6B5SfJNL5Yt667Ms3qubMzA8lrMbcnQ5yhHaYb60Imnfw',
+      );
+      print('[AdminFCM] Fetched FCM token: $token');
       if (token == null || token.isEmpty) {
         print('[AdminFCM] No FCM token available');
         return;
@@ -31,8 +37,12 @@ class AdminFcmService {
 
       FirebaseMessaging.onMessage.listen((message) {
         final notification = message.notification;
-        final title = notification?.title ?? message.data['title']?.toString() ?? 'AuraWealth';
-        final body = notification?.body ?? message.data['body']?.toString() ?? '';
+        final title =
+            notification?.title ??
+            message.data['title']?.toString() ??
+            'AuraWealth';
+        final body =
+            notification?.body ?? message.data['body']?.toString() ?? '';
         if (body.isNotEmpty) {
           Get.snackbar(title, body, duration: const Duration(seconds: 4));
         }
@@ -48,7 +58,7 @@ class AdminFcmService {
         'token': token,
         'device_name': 'admin_panel',
       });
-      print('[AdminFCM] Admin FCM token registered');
+      print('[AdminFCM] Admin FCM token registered: $token');
     } catch (e) {
       print('[AdminFCM] Token registration failed: $e');
     }

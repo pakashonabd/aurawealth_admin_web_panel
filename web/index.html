@@ -33,6 +33,13 @@
 
   <title>AuraWealth Admin Panel</title>
   <link rel="manifest" href="manifest.json">
+
+  <!-- Firebase Messaging service worker for Flutter web FCM background notifications -->
+  <script>
+    if ('serviceWorker' in navigator) {
+      navigator.serviceWorker.register('firebase-messaging-sw.js');
+    }
+  </script>
 </head>
 <body>
   <script src="flutter_bootstrap.js" async></script>
