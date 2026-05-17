@@ -45,3 +45,4 @@ app.*.map.json
 /android/app/release
 .aider*
 /.clawd-todos.json
+/.claw/sessions/82b78eedc19f018a/session-1779018829040-0.jsonl
