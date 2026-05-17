@@ -141,6 +141,22 @@ class _StoreOperationsScreenState extends State<StoreOperationsScreen>
     return null;
   }
 
+  String _creditTargetBackendUserId() {
+    final backendId = _selectedUser?.backendId?.trim();
+    if (backendId != null && backendId.isNotEmpty) return backendId;
+
+    final selectedId = _selectedUserId?.trim() ?? '';
+    if (_looksLikeUuid(selectedId)) return selectedId;
+
+    return '';
+  }
+
+  bool _looksLikeUuid(String value) {
+    return RegExp(
+      r'^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$',
+    ).hasMatch(value);
+  }
+
   Future<void> _creditGrams() async {
     if (!_creditFormKey.currentState!.validate()) return;
 
@@ -155,11 +171,23 @@ class _StoreOperationsScreenState extends State<StoreOperationsScreen>
       return;
     }
 
+    final targetUserId = _creditTargetBackendUserId();
+    if (targetUserId.isEmpty) {
+      Get.snackbar(
+        'Error',
+        'Selected user does not have a backend/PostgreSQL user UUID. Please refresh users and try again.',
+        backgroundColor: AppColors.error.withValues(alpha: 0.1),
+        colorText: AppColors.error,
+        icon: Icon(Icons.error, color: AppColors.error),
+      );
+      return;
+    }
+
     setState(() => _isCreditLoading = true);
 
     try {
       final grams = double.parse(_gramsController.text.trim());
-      await _apiService.creditGrams(_selectedUserId!, grams);
+      await _apiService.creditGrams(targetUserId, grams);
 
       if (mounted) {
         _showSuccessAnimation();

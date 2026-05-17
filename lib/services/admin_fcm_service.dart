@@ -1,5 +1,6 @@
 // ignore_for_file: avoid_print
 
+import 'dart:async';
 import 'dart:convert';
 
 import 'package:firebase_core/firebase_core.dart';
@@ -7,9 +8,16 @@ import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:http/http.dart' as http;
+import '../controllers/admin_chat_controller.dart';
+import '../controllers/message_controller.dart';
+import '../controllers/navigation_controller.dart';
+import '../controllers/user_controller.dart';
 import '../core/constants/app_constants.dart';
+import '../models/user.dart';
 import '../routes/app_routes.dart';
 import 'storage_service.dart';
+
+enum _AdminNotificationKind { chat, mail }
 
 /// Registers the admin panel's FCM token so the backend can notify admins when
 /// users write new Firestore chat messages.
@@ -89,7 +97,7 @@ class AdminFcmService {
       );
 
       FirebaseMessaging.onMessage.listen((message) {
-        _showAdminMessagePopup(message);
+        unawaited(_showAdminMessagePopup(message));
       });
       print('[AdminFCM] initialize() completed');
     } catch (e, stackTrace) {
@@ -98,20 +106,51 @@ class AdminFcmService {
     }
   }
 
-  static void _showAdminMessagePopup(RemoteMessage message) {
+  static Future<void> _showAdminMessagePopup(RemoteMessage message) async {
     final notification = message.notification;
     final data = message.data;
 
-    final userName = _firstNonEmpty(data, const [
+    print(
+      '[AdminFCM] Foreground message notification title: ${notification?.title}',
+    );
+    print(
+      '[AdminFCM] Foreground message notification body: ${notification?.body}',
+    );
+    print('[AdminFCM] Foreground message data payload: $data');
+
+    final userId = _firstNonEmpty(data, const [
+      'userId',
+      'user_id',
+      'senderId',
+      'sender_id',
+      'fromUserId',
+      'from_user_id',
+      'uid',
+      'firebaseUid',
+      'firebase_uid',
+      'chatId',
+      'chat_id',
+    ]);
+    final notificationKind = _resolveNotificationKind(data, notification);
+    final isMailNotification = notificationKind == _AdminNotificationKind.mail;
+    final user = await _findUserForNotification(userId: userId, data: data);
+
+    final rawUserName = _firstNonEmpty(data, const [
       'userName',
       'user_name',
       'senderName',
       'sender_name',
+      'customerName',
+      'customer_name',
+      'fullName',
+      'full_name',
       'name',
       'displayName',
       'display_name',
-      'title',
-    ], fallback: notification?.title ?? 'Customer');
+    ], fallback: user?.name ?? '');
+    final cleanUserName = _cleanGenericTitle(rawUserName);
+    final displayName = cleanUserName.isEmpty ? 'No Name Found' : cleanUserName;
+
     final phoneNumber = _firstNonEmpty(data, const [
       'phoneNumber',
       'phone_number',
@@ -121,7 +160,7 @@ class AdminFcmService {
       'mobile_number',
       'contact',
       'number',
-    ]);
+    ], fallback: user?.phoneNumber ?? user?.email ?? '');
     final body = _firstNonEmpty(data, const [
       'message',
       'body',
@@ -131,12 +170,15 @@ class AdminFcmService {
       'last_message',
     ], fallback: notification?.body ?? 'New message received');
 
-    final cleanUserName = _cleanGenericTitle(userName);
-    final displayName = cleanUserName.isEmpty ? 'Customer' : cleanUserName;
     final displayPhone = phoneNumber.isEmpty
         ? 'No number provided'
         : phoneNumber;
     final displayBody = body.isEmpty ? 'New message received' : body;
+
+    print(
+      '[AdminFCM] Popup resolved user: '
+      'userId=$userId, name=$displayName, phone=$displayPhone',
+    );
 
     if (Get.isDialogOpen == true) {
       Get.back<void>();
@@ -147,7 +189,7 @@ class AdminFcmService {
         insetPadding: const EdgeInsets.symmetric(horizontal: 24, vertical: 24),
         backgroundColor: Colors.transparent,
         child: ConstrainedBox(
-          constraints: const BoxConstraints(maxWidth: 460, minWidth: 360),
+          constraints: const BoxConstraints(maxWidth: 500, minWidth: 380),
           child: Material(
             color: Colors.white,
             borderRadius: BorderRadius.circular(24),
@@ -166,27 +208,15 @@ class AdminFcmService {
                   Row(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Container(
-                        width: 52,
-                        height: 52,
-                        decoration: BoxDecoration(
-                          color: const Color(0xFFEAF4FF),
-                          borderRadius: BorderRadius.circular(16),
-                        ),
-                        child: const Icon(
-                          Icons.chat_bubble_rounded,
-                          color: Color(0xFF1565C0),
-                          size: 28,
-                        ),
-                      ),
-                      const SizedBox(width: 16),
                       Expanded(
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            const Text(
-                              'New customer message',
-                              style: TextStyle(
+                            Text(
+                              isMailNotification
+                                  ? 'New customer mail'
+                                  : 'New customer message',
+                              style: const TextStyle(
                                 color: Color(0xFF64748B),
                                 fontSize: 13,
                                 fontWeight: FontWeight.w700,
@@ -198,12 +228,27 @@ class AdminFcmService {
                               displayName,
                               maxLines: 1,
                               overflow: TextOverflow.ellipsis,
-                              style: const TextStyle(
-                                color: Color(0xFF0F172A),
+                              style: TextStyle(
+                                color: displayName == 'No Name Found'
+                                    ? const Color(0xFFDC2626)
+                                    : const Color(0xFF0F172A),
                                 fontSize: 23,
                                 fontWeight: FontWeight.w800,
                               ),
                             ),
+                            if (userId.isNotEmpty) ...[
+                              const SizedBox(height: 4),
+                              Text(
+                                'User ID: $userId',
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                                style: const TextStyle(
+                                  color: Color(0xFF94A3B8),
+                                  fontSize: 12,
+                                  fontWeight: FontWeight.w600,
+                                ),
+                              ),
+                            ],
                           ],
                         ),
                       ),
@@ -290,8 +335,9 @@ class AdminFcmService {
                       Expanded(
                         child: ElevatedButton.icon(
                           onPressed: () {
-                            Get.back<void>();
-                            Get.toNamed(AppRoutes.messages);
+                            unawaited(
+                              _openNotificationThread(userId, notificationKind),
+                            );
                           },
                           style: ElevatedButton.styleFrom(
                             backgroundColor: const Color(0xFF1565C0),
@@ -303,7 +349,9 @@ class AdminFcmService {
                             elevation: 0,
                           ),
                           icon: const Icon(Icons.open_in_new_rounded, size: 18),
-                          label: const Text('Open chat'),
+                          label: Text(
+                            isMailNotification ? 'Open mail' : 'Open chat',
+                          ),
                         ),
                       ),
                     ],
@@ -318,6 +366,186 @@ class AdminFcmService {
     );
   }
 
+  static Future<void> _openNotificationThread(
+    String userId,
+    _AdminNotificationKind notificationKind,
+  ) async {
+    if (Get.isDialogOpen == true) {
+      Get.back<void>();
+    }
+
+    final targetFilter = notificationKind == _AdminNotificationKind.mail
+        ? 'static'
+        : 'live';
+    final targetLabel = notificationKind == _AdminNotificationKind.mail
+        ? 'mail'
+        : 'chat';
+
+    try {
+      if (Get.isRegistered<NavigationController>()) {
+        Get.find<NavigationController>().navigateTo(AppRoutes.messages);
+      } else {
+        await Get.toNamed(AppRoutes.messages);
+      }
+
+      if (!Get.isRegistered<MessageController>()) {
+        Get.put(MessageController());
+      }
+
+      final messageController = Get.find<MessageController>();
+      if (userId.isNotEmpty) {
+        messageController.selectedUserId.value = userId;
+
+        final AdminChatController adminChat;
+        if (!Get.isRegistered<AdminChatController>(tag: userId)) {
+          adminChat = Get.put(
+            AdminChatController(targetUserId: userId),
+            tag: userId,
+            permanent: false,
+          );
+        } else {
+          adminChat = Get.find<AdminChatController>(tag: userId);
+          unawaited(adminChat.reloadHistory());
+        }
+
+        adminChat.setMessageTypeFilter(targetFilter);
+      }
+
+      print(
+        '[AdminFCM] Open $targetLabel button routed to '
+        '${AppRoutes.messages} userId=$userId filter=$targetFilter',
+      );
+    } catch (e, stackTrace) {
+      print('[AdminFCM] Open $targetLabel routing failed: $e');
+      print('[AdminFCM] Open $targetLabel routing stack trace: $stackTrace');
+    }
+  }
+
+  static Future<User?> _findUserForNotification({
+    required String userId,
+    required Map<String, dynamic> data,
+  }) async {
+    UserController userController;
+    try {
+      if (Get.isRegistered<UserController>()) {
+        userController = Get.find<UserController>();
+      } else {
+        userController = Get.put(UserController());
+      }
+
+      if (userController.users.isEmpty && !userController.isLoading.value) {
+        await userController.loadUsers();
+      } else if (userController.isLoading.value) {
+        for (var i = 0; i < 20 && userController.users.isEmpty; i++) {
+          await Future<void>.delayed(const Duration(milliseconds: 100));
+        }
+      }
+
+      final idCandidates = <String>{
+        userId,
+        _firstNonEmpty(data, const ['backendId', 'backend_id']),
+        _firstNonEmpty(data, const ['firebaseUid', 'firebase_uid', 'uid']),
+      }..removeWhere((value) => value.trim().isEmpty);
+
+      for (final candidate in idCandidates) {
+        final user = userController.findUser(candidate);
+        if (user != null) return user;
+      }
+
+      final email = _firstNonEmpty(data, const [
+        'email',
+        'userEmail',
+        'user_email',
+      ]);
+      final phone = _firstNonEmpty(data, const [
+        'phoneNumber',
+        'phone_number',
+        'phone',
+        'mobile',
+        'mobileNumber',
+        'mobile_number',
+      ]);
+      if (email.isNotEmpty || phone.isNotEmpty) {
+        return userController.users.firstWhereOrNull(
+          (user) =>
+              (email.isNotEmpty && user.email == email) ||
+              (phone.isNotEmpty && user.phoneNumber == phone),
+        );
+      }
+    } catch (e, stackTrace) {
+      print('[AdminFCM] Failed to resolve notification user details: $e');
+      print('[AdminFCM] User resolution stack trace: $stackTrace');
+    }
+    return null;
+  }
+
+  static _AdminNotificationKind _resolveNotificationKind(
+    Map<String, dynamic> data,
+    RemoteNotification? notification,
+  ) {
+    final explicitType = _firstNonEmpty(data, const [
+      'messageType',
+      'message_type',
+      'type',
+      'notificationType',
+      'notification_type',
+      'kind',
+      'category',
+      'tab',
+      'screen',
+      'route',
+      'target',
+      'collection',
+      'subcollection',
+    ]).toLowerCase();
+
+    if (_isMailTypeValue(explicitType)) return _AdminNotificationKind.mail;
+    if (_isChatTypeValue(explicitType)) return _AdminNotificationKind.chat;
+
+    final titleAndBody = [
+      notification?.title,
+      notification?.body,
+    ].whereType<String>().join(' ').toLowerCase();
+    if (_containsMailWord(titleAndBody)) return _AdminNotificationKind.mail;
+
+    final subject = _firstNonEmpty(data, const ['subject', 'mailSubject']);
+    if (subject.isNotEmpty) return _AdminNotificationKind.mail;
+
+    return _AdminNotificationKind.chat;
+  }
+
+  static bool _isMailTypeValue(String value) {
+    return value == 'static' ||
+        value == 'mail' ||
+        value == 'mails' ||
+        value == 'email' ||
+        value == 'emails' ||
+        value == 'inbox' ||
+        value.contains('/mails') ||
+        value.contains('/mail') ||
+        value.contains('mail_') ||
+        value.contains('_mail') ||
+        value.contains('email_') ||
+        value.contains('_email');
+  }
+
+  static bool _isChatTypeValue(String value) {
+    return value == 'live' ||
+        value == 'chat' ||
+        value == 'chats' ||
+        value == 'message' ||
+        value == 'messages' ||
+        value == 'image' ||
+        value.contains('/messages') ||
+        value.contains('/chat') ||
+        value.contains('chat_') ||
+        value.contains('_chat');
+  }
+
+  static bool _containsMailWord(String value) {
+    return RegExp(r'(^|[^a-z])(mail|email|inbox)([^a-z]|$)').hasMatch(value);
+  }
+
   static String _firstNonEmpty(
     Map<String, dynamic> data,
     List<String> keys, {
@@ -325,7 +553,7 @@ class AdminFcmService {
   }) {
     for (final key in keys) {
       final value = data[key]?.toString().trim() ?? '';
-      if (value.isNotEmpty) return value;
+      if (value.isNotEmpty && value.toLowerCase() != 'null') return value;
     }
     return fallback.trim();
   }
@@ -334,7 +562,12 @@ class AdminFcmService {
     final trimmed = value.trim();
     final lower = trimmed.toLowerCase();
     if (lower == 'message from user' ||
+        lower == 'new message from user' ||
         lower == 'new message' ||
+        lower == 'message' ||
+        lower == 'user' ||
+        lower == 'customer' ||
+        lower == 'unknown user' ||
         lower == 'aurawealth') {
       return '';
     }

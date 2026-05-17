@@ -233,22 +233,41 @@ class FirestoreAdminChatService {
 
   Message messageFromFirestore(String id, Map<String, dynamic> data) {
     final senderRole = data['senderRole'] as String? ?? 'user';
+    final rawType =
+        (data['type'] ?? data['messageType'] ?? data['message_type'])
+            ?.toString()
+            .trim();
+    final messageType = rawType == 'static' ? 'static' : 'live';
     final createdAt =
         _timestampToIso(
-          data['createdAt'] ?? data['timestamp'] ?? data['created_at'],
+          // Android image messages use `timestamp`; older/admin docs may use
+          // `createdAt`. Prefer timestamp so sorting matches the mobile app.
+          data['timestamp'] ?? data['createdAt'] ?? data['created_at'],
           fallback: data['updatedAt']?.toString(),
         ) ??
         DateTime.now().toUtc().toIso8601String();
+    final attachmentUrl = data['imageUrl']?.toString().trim().isNotEmpty == true
+        ? data['imageUrl']?.toString().trim()
+        : data['attachmentUrl']?.toString().trim().isNotEmpty == true
+        ? data['attachmentUrl']?.toString().trim()
+        : data['attachment_url']?.toString().trim().isNotEmpty == true
+        ? data['attachment_url']?.toString().trim()
+        : null;
 
     return Message(
       id: (data['id'] as String?) ?? id,
       direction: senderRole == 'admin' ? 'admin_to_user' : 'user_to_admin',
-      messageType:
-          ((data['type'] ?? data['message_type']) as String?) ?? 'live',
+      // Android sends image messages as `type: image`; those are still live
+      // chat messages and must not be filtered out by the admin live tab.
+      messageType: messageType,
       subject: data['subject'] as String?,
-      body: (data['content'] as String?) ?? (data['body'] as String? ?? ''),
-      attachmentUrl:
-          data['attachmentUrl'] as String? ?? data['attachment_url'] as String?,
+      body:
+          data['content']?.toString() ??
+          data['body']?.toString() ??
+          data['message']?.toString() ??
+          data['text']?.toString() ??
+          '',
+      attachmentUrl: attachmentUrl,
       isRead: senderRole == 'admin'
           ? (data['readByUser'] as bool? ?? false)
           : (data['readByAdmin'] as bool? ?? false),

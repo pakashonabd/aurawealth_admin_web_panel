@@ -354,7 +354,10 @@ class _TargetedNotificationCardState extends State<TargetedNotificationCard> {
   Future<void> _handleSend() async {
     final title = _titleCtrl.text.trim();
     final body = _bodyCtrl.text.trim();
-    final imageUrl = _includeImage ? _imageCtrl.text.trim() : null;
+    final rawImageUrl = _imageCtrl.text.trim();
+    final imageUrl = _includeImage && rawImageUrl.isNotEmpty
+        ? rawImageUrl
+        : null;
     final dataJson = _dataCtrl.text.trim();
 
     if (title.isEmpty || body.isEmpty) {
@@ -394,8 +397,22 @@ class _TargetedNotificationCardState extends State<TargetedNotificationCard> {
       }
     }
 
+    final selectedUser = _userController.findUser(_selectedUserId!);
+    final targetUserId = _notificationTargetUserId(selectedUser);
+
+    if (targetUserId.isEmpty) {
+      Get.snackbar(
+        'Error',
+        'Selected user does not have a valid notification user id',
+        snackPosition: SnackPosition.BOTTOM,
+        backgroundColor: AppColors.error,
+        colorText: Colors.white,
+      );
+      return;
+    }
+
     final response = await _controller.sendNotification(
-      userId: _selectedUserId,
+      userId: targetUserId,
       title: title,
       body: body,
       imageUrl: imageUrl,
@@ -422,6 +439,27 @@ class _TargetedNotificationCardState extends State<TargetedNotificationCard> {
         colorText: Colors.white,
       );
     }
+  }
+
+  String _notificationTargetUserId(User? user) {
+    if (user == null) return _selectedUserId ?? '';
+
+    final possibleIds = <String>{
+      user.id,
+      if (user.backendId != null && user.backendId!.isNotEmpty) user.backendId!,
+      if (user.firebaseUid != null && user.firebaseUid!.isNotEmpty)
+        user.firebaseUid!,
+    };
+
+    final matchingDevice = _controller.devices.firstWhereOrNull(
+      (device) =>
+          possibleIds.contains(device.userId) && device.token.isNotEmpty,
+    );
+    if (matchingDevice != null && matchingDevice.userId.isNotEmpty) {
+      return matchingDevice.userId;
+    }
+
+    return user.backendId?.isNotEmpty == true ? user.backendId! : user.id;
   }
 
   void _clearForm() {

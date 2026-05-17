@@ -38,6 +38,17 @@ class CreditGramsPanel extends StatelessWidget {
     required this.gramsValidator,
   });
 
+  String _backendDisplayId(User user) {
+    final backendId = user.backendId?.trim();
+    if (backendId != null && backendId.isNotEmpty) return backendId;
+    return user.id;
+  }
+
+  String _shorten(String value) {
+    if (value.length <= 20) return value;
+    return '${value.substring(0, 20)}...';
+  }
+
   @override
   Widget build(BuildContext context) {
     return Card(
@@ -187,6 +198,8 @@ class CreditGramsPanel extends StatelessWidget {
                                                 children: filteredUsers.map((
                                                   user,
                                                 ) {
+                                                  final displayId =
+                                                      _backendDisplayId(user);
                                                   return InkWell(
                                                     onTap: () {
                                                       onSelectUser(user);
@@ -263,7 +276,7 @@ class CreditGramsPanel extends StatelessWidget {
                                                                             .ellipsis,
                                                                   ),
                                                                 Text(
-                                                                  'ID: ${user.id.length > 20 ? '${user.id.substring(0, 20)}...' : user.id}',
+                                                                  'Backend ID: ${_shorten(displayId)}',
                                                                   style: TextStyle(
                                                                     fontSize:
                                                                         11,
@@ -331,7 +344,7 @@ class CreditGramsPanel extends StatelessWidget {
                                               overflow: TextOverflow.ellipsis,
                                             ),
                                           Text(
-                                            'ID: ${selectedUser!.id.length > 20 ? '${selectedUser!.id.substring(0, 20)}...' : selectedUser!.id}',
+                                            'Backend ID: ${_shorten(_backendDisplayId(selectedUser!))}',
                                             style: TextStyle(
                                               fontSize: 11,
                                               color: AppColors.grey600,

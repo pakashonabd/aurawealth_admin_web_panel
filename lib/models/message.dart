@@ -44,10 +44,10 @@ class Message {
       'created_at': createdAt,
     };
   }
-  
+
   bool get isFromUser => direction == 'user_to_admin';
   bool get isFromAdmin => direction == 'admin_to_user';
-  bool get isLiveMessage => messageType == 'live';
+  bool get isLiveMessage => messageType == 'live' || messageType == 'image';
   bool get isStaticMessage => messageType == 'static';
 
   DateTime get parsedCreatedAt {
