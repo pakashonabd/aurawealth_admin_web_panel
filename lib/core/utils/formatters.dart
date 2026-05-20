@@ -19,7 +19,7 @@ class Formatters {
   
   // Format date time
   static String formatDateTime(DateTime dateTime) {
-    return DateFormat('dd MMM yyyy, HH:mm').format(dateTime);
+    return DateFormat('dd MMM yyyy, hh:mm a').format(dateTime);
   }
   
   // Format date time with seconds
