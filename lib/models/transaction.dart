@@ -18,6 +18,7 @@ class Transaction {
   final String? userName;
   final String? userEmail;
   final String? userPhoto;
+  final String? userPhone;
 
   Transaction({
     required this.id,
@@ -39,6 +40,7 @@ class Transaction {
     this.userName,
     this.userEmail,
     this.userPhoto,
+    this.userPhone,
   });
 
   static double _d(dynamic v) {
@@ -83,9 +85,12 @@ class Transaction {
     final userId = json['user_id']?.toString();
     final userName = json['user_name']?.toString();
     final userEmail = json['user_email']?.toString();
-    final userPhoto = json['user_photo']?.toString() ?? 
-                      json['photo_url']?.toString() ?? 
+    final userPhoto = json['user_photo']?.toString() ??
+                      json['photo_url']?.toString() ??
                       json['profile_photo']?.toString();
+    final userPhone = json['user_phone']?.toString() ??
+                      json['phone_number']?.toString() ??
+                      json['phone']?.toString();
     
     // Debug log for user data
     if (userId != null) {
@@ -118,6 +123,7 @@ class Transaction {
       userName:     userName,
       userEmail:    userEmail,
       userPhoto:    userPhoto,
+      userPhone:    userPhone,
     );
   }
 
@@ -141,5 +147,6 @@ class Transaction {
     'user_name': userName,
     'user_email': userEmail,
     'user_photo': userPhoto,
+    'user_phone': userPhone,
   };
 }

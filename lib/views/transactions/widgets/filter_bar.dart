@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:get/get.dart';
 import '../../../../controllers/transaction_controller.dart';
 import '../../../../core/constants/app_colors.dart';
 import './transaction_constants.dart';
@@ -8,11 +9,12 @@ class FilterBar extends StatelessWidget {
   const FilterBar({super.key, required this.ctrl});
 
   @override
-  Widget build(BuildContext context) {
-    final statusVal =
-    ctrl.selectedStatus.value.isEmpty ? null : ctrl.selectedStatus.value;
+  Widget build(BuildContext context) => Obx(() {
+    final statusVal = ctrl.selectedStatus.value.isEmpty
+        ? null
+        : ctrl.selectedStatus.value;
     final typeVal =
-    ctrl.selectedType.value.isEmpty ? null : ctrl.selectedType.value;
+        ctrl.selectedType.value.isEmpty ? null : ctrl.selectedType.value;
     final hasFilter = ctrl.selectedStatus.value.isNotEmpty ||
         ctrl.selectedType.value.isNotEmpty ||
         ctrl.searchQuery.value.isNotEmpty;
@@ -25,17 +27,18 @@ class FilterBar extends StatelessWidget {
           child: SizedBox(
             height: 34,
             child: TextField(
+              controller: ctrl.searchCtrl,
               onChanged: ctrl.setSearchQuery,
               style: const TextStyle(fontSize: 12),
               decoration: InputDecoration(
-                hintText: 'Search ID, user, type…',
+                hintText: 'Search ID, user, phone, type…',
                 hintStyle: const TextStyle(fontSize: 12, color: textMuted),
-                prefixIcon: const Icon(Icons.search_rounded,
-                    size: 16, color: textSec),
+                prefixIcon:
+                    const Icon(Icons.search_rounded, size: 16, color: textSec),
                 filled: true,
                 fillColor: bg,
                 contentPadding:
-                const EdgeInsets.symmetric(horizontal: 10, vertical: 0),
+                    const EdgeInsets.symmetric(horizontal: 10, vertical: 0),
                 border: OutlineInputBorder(
                     borderRadius: BorderRadius.circular(radiusSm),
                     borderSide: BorderSide.none),
@@ -47,7 +50,8 @@ class FilterBar extends StatelessWidget {
         _DropdownFilter(
           label: 'Status',
           value: statusVal,
-          items: const ['pending', 'approved', 'paid', 'rejected'],
+          items: const ['PENDING', 'APPROVED', 'PAID', 'REJECTED'],
+          itemLabels: const ['Pending', 'Approved', 'Paid', 'Rejected'],
           onChanged: ctrl.setStatusFilter,
         ),
         const SizedBox(width: 6),
@@ -55,13 +59,17 @@ class FilterBar extends StatelessWidget {
           label: 'Type',
           value: typeVal,
           items: const [
-            'BUY_IN_APP', 'BUY_IN_STORE',
-            'SELL_TO_BANK', 'SELL_TO_STORE',
+            'BUY_IN_APP',
+            'BUY_IN_STORE',
+            'SELL_TO_BANK',
+            'SELL_TO_STORE',
             'EXCHANGE_TO_JEWELLERY',
           ],
           itemLabels: const [
-            'Buy In App', 'Buy In Store',
-            'Sell to Bank', 'Sell to Store',
+            'Buy In App',
+            'Buy In Store',
+            'Sell to Bank',
+            'Sell to Store',
             'Exchange',
           ],
           onChanged: ctrl.setTypeFilter,
@@ -81,7 +89,9 @@ class FilterBar extends StatelessWidget {
                 Icon(Icons.close_rounded, size: 12, color: colRejected),
                 SizedBox(width: 4),
                 Text('Clear',
-                    style: TextStyle(fontSize: 11, color: colRejected,
+                    style: TextStyle(
+                        fontSize: 11,
+                        color: colRejected,
                         fontWeight: FontWeight.w600)),
               ]),
             ),
@@ -89,7 +99,7 @@ class FilterBar extends StatelessWidget {
         ],
       ]),
     );
-  }
+  });
 }
 
 class _DropdownFilter extends StatelessWidget {
@@ -139,10 +149,10 @@ class _DropdownFilter extends StatelessWidget {
                   style: const TextStyle(fontSize: 11, color: textSec)),
             ),
             ...items.asMap().entries.map((e) => DropdownMenuItem<String>(
-              value: e.value,
-              child: Text(itemLabels?[e.key] ?? e.value,
-                  style: const TextStyle(fontSize: 11)),
-            )),
+                  value: e.value,
+                  child: Text(itemLabels?[e.key] ?? e.value,
+                      style: const TextStyle(fontSize: 11)),
+                )),
           ],
         ),
       ),

@@ -10,18 +10,18 @@ class StatusBadge extends StatelessWidget {
     final clr  = statusColor(status);
     final icon = statusIcon(status);
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 3),
+      padding: const EdgeInsets.symmetric(horizontal: 3, vertical: 1),
       decoration: BoxDecoration(
         color: clr.withOpacity(0.07),
-        borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: clr.withOpacity(0.4)),
+        borderRadius: BorderRadius.circular(8),
+        border: Border.all(color: clr.withOpacity(0.4), width: 0.5),
       ),
       child: Row(mainAxisSize: MainAxisSize.min, children: [
-        Icon(icon, size: 10, color: clr),
-        const SizedBox(width: 3),
+        Icon(icon, size: 8, color: clr),
+        const SizedBox(width: 1),
         Text(status.toUpperCase(),
-            style: TextStyle(fontSize: 9, fontWeight: FontWeight.w700,
-                color: clr, letterSpacing: 0.4)),
+            style: TextStyle(fontSize: 8.5, fontWeight: FontWeight.w700,
+                color: clr, letterSpacing: 0.2)),
       ]),
     );
   }

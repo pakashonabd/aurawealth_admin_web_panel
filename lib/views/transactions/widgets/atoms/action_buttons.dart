@@ -12,14 +12,14 @@ class ActionButtons extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) =>
-      Row(mainAxisSize: MainAxisSize.min, children: [
+      Column(mainAxisSize: MainAxisSize.min, children: [
         _ActionBtn(
           label: 'Approve',
           icon: Icons.check_rounded,
           color: colApproved,
           onTap: () => showApproveDialog(context, tx, ctrl),
         ),
-        const SizedBox(width: 6),
+        const SizedBox(height: 4),
         _ActionBtn(
           label: 'Reject',
           icon: Icons.close_rounded,

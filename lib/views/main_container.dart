@@ -202,6 +202,9 @@ class MainContainer extends StatelessWidget {
         if (!Get.isRegistered<TransactionController>()) {
           Get.lazyPut<TransactionController>(() => TransactionController());
         }
+        if (!Get.isRegistered<UserController>()) {
+          Get.lazyPut<UserController>(() => UserController());
+        }
         return TransactionsScreen();
 
       case AppRoutes.users:

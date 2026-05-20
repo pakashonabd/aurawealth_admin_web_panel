@@ -1,9 +1,13 @@
+import 'dart:async';
+import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import '../models/transaction.dart';
 import '../services/api_service.dart';
 
 class TransactionController extends GetxController {
   final ApiService _apiService = ApiService();
+  Timer? _searchDebounce;
+  final searchCtrl = TextEditingController();
 
   final RxBool isLoading = false.obs;
   final RxString errorMessage = ''.obs;
@@ -81,19 +85,20 @@ class TransactionController extends GetxController {
           t.type.toLowerCase().contains(q) ||
           (t.code?.toLowerCase().contains(q) ?? false) ||
           (t.userName?.toLowerCase().contains(q) ?? false) ||
-          (t.userEmail?.toLowerCase().contains(q) ?? false)).toList();
+          (t.userEmail?.toLowerCase().contains(q) ?? false) ||
+          (t.userPhone?.toLowerCase().contains(q) ?? false)).toList();
     }
 
     filteredTransactions.value = filtered;
   }
 
   void setStatusFilter(String? status) {
-    selectedStatus.value = status ?? '';
+    selectedStatus.value = (status ?? '').toUpperCase();
     applyFilters();
   }
 
   void setTypeFilter(String? type) {
-    selectedType.value = type ?? '';
+    selectedType.value = (type ?? '').toUpperCase();
     applyFilters();
   }
 
@@ -105,7 +110,8 @@ class TransactionController extends GetxController {
 
   void setSearchQuery(String query) {
     searchQuery.value = query;
-    applyFilters();
+    _searchDebounce?.cancel();
+    _searchDebounce = Timer(const Duration(milliseconds: 300), applyFilters);
   }
 
   void clearFilters() {
@@ -114,6 +120,7 @@ class TransactionController extends GetxController {
     startDate.value      = null;
     endDate.value        = null;
     searchQuery.value    = '';
+    searchCtrl.clear();
     applyFilters();
   }
 
@@ -143,6 +150,13 @@ class TransactionController extends GetxController {
       Get.snackbar('Error', e.toString().replaceAll('Exception: ', ''),
           snackPosition: SnackPosition.TOP);
     }
+  }
+
+  @override
+  void onClose() {
+    _searchDebounce?.cancel();
+    searchCtrl.dispose();
+    super.onClose();
   }
 
   void refresh() => loadTransactions();

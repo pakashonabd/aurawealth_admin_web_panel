@@ -27,8 +27,8 @@ class TransactionsScreen extends StatelessWidget {
           );
         }
 
-        final all      = ctrl.transactions;
-        final filtered = ctrl.filteredTransactions;
+        final all      = ctrl.transactions.toList();
+        final filtered = ctrl.filteredTransactions.toList();
         final pending  = all.where((t) => t.status.toLowerCase() == 'pending').length;
         final approved = all.where((t) => t.status.toLowerCase() == 'approved').length;
         final rejected = all.where((t) => t.status.toLowerCase() == 'rejected').length;
