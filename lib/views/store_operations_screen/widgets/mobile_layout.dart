@@ -23,35 +23,33 @@ class MobileLayout extends StatelessWidget {
         Container(
           margin: const EdgeInsets.symmetric(horizontal: 16),
           decoration: BoxDecoration(
-            color: AppColors.grey100,
-            borderRadius: BorderRadius.circular(12),
+            color: AppColors.grey100.withValues(alpha: 0.5),
+            borderRadius: BorderRadius.circular(10),
           ),
           child: TabBar(
             controller: tabController,
             indicator: BoxDecoration(
-              color: AppColors.primary,
-              borderRadius: BorderRadius.circular(12),
-              boxShadow: [
-                BoxShadow(
-                  color: AppColors.primary.withValues(alpha: 0.3),
-                  blurRadius: 8,
-                  offset: const Offset(0, 2),
-                ),
-              ],
+              color: AppColors.primary.withValues(alpha: 0.08),
+              borderRadius: BorderRadius.circular(10),
             ),
-            labelColor: Colors.white,
-            unselectedLabelColor: AppColors.grey600,
+            labelColor: AppColors.primary,
+            unselectedLabelColor: AppColors.grey500,
             labelStyle: const TextStyle(
-              fontSize: 14,
+              fontSize: 13,
               fontWeight: FontWeight.w600,
             ),
+            unselectedLabelStyle: const TextStyle(
+              fontSize: 13,
+              fontWeight: FontWeight.w500,
+            ),
+            dividerColor: Colors.transparent,
             tabs: const [
               Tab(
-                icon: Icon(Icons.add_card),
+                icon: Icon(Icons.add_card, size: 18),
                 text: 'Credit Grams',
               ),
               Tab(
-                icon: Icon(Icons.qr_code_scanner),
+                icon: Icon(Icons.qr_code_scanner, size: 18),
                 text: 'Redeem Code',
               ),
             ],
