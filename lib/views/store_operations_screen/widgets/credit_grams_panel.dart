@@ -51,16 +51,21 @@ class CreditGramsPanel extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Card(
-      elevation: 2,
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-      child: Container(
-        decoration: BoxDecoration(
-          borderRadius: BorderRadius.circular(16),
-          color: AppColors.background,
-        ),
-        child: Padding(
-          padding: const EdgeInsets.all(24),
+    return Container(
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(20),
+        color: Colors.white,
+        border: Border.all(color: AppColors.grey200, width: 1),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.04),
+            blurRadius: 8,
+            offset: const Offset(0, 2),
+          ),
+        ],
+      ),
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 28, vertical: 24),
           child: Form(
             key: formKey,
             child: Column(
@@ -71,33 +76,33 @@ class CreditGramsPanel extends StatelessWidget {
                 Row(
                   children: [
                     Container(
-                      padding: const EdgeInsets.all(12),
+                      padding: const EdgeInsets.all(8),
                       decoration: BoxDecoration(
-                        color: AppColors.primary.withValues(alpha: 0.1),
-                        borderRadius: BorderRadius.circular(12),
+                        color: AppColors.primary.withValues(alpha: 0.08),
+                        borderRadius: BorderRadius.circular(10),
                       ),
                       child: Icon(
                         Icons.add_card,
                         color: AppColors.primary,
-                        size: 28,
+                        size: 20,
                       ),
                     ),
-                    const SizedBox(width: 16),
+                    const SizedBox(width: 12),
                     Expanded(
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           Text(
                             'Credit Grams to User',
-                            style: Theme.of(context).textTheme.headlineSmall
-                                ?.copyWith(fontWeight: FontWeight.bold),
+                            style: Theme.of(context).textTheme.titleMedium
+                                ?.copyWith(fontWeight: FontWeight.w600),
                           ),
-                          const SizedBox(height: 4),
+                          const SizedBox(height: 2),
                           Text(
                             'For in-store purchases',
                             style: TextStyle(
-                              color: AppColors.grey600,
-                              fontSize: 14,
+                              color: AppColors.grey500,
+                              fontSize: 13,
                             ),
                           ),
                         ],
@@ -105,8 +110,8 @@ class CreditGramsPanel extends StatelessWidget {
                     ),
                     // Lottie Animation
                     SizedBox(
-                      width: 100,
-                      height: 100,
+                      width: 48,
+                      height: 48,
                       child: Lottie.asset(
                         'assets/lottie/website building of shopping sale.json',
                         fit: BoxFit.contain,
@@ -114,7 +119,7 @@ class CreditGramsPanel extends StatelessWidget {
                     ),
                   ],
                 ),
-                const SizedBox(height: 32),
+                const SizedBox(height: 24),
 
                 // User Selection Dropdown with Search
                 Column(
@@ -123,7 +128,7 @@ class CreditGramsPanel extends StatelessWidget {
                     Text(
                       'Select User',
                       style: TextStyle(
-                        fontSize: 14,
+                        fontSize: 13,
                         fontWeight: FontWeight.w500,
                         color: AppColors.textPrimary,
                       ),
@@ -370,7 +375,7 @@ class CreditGramsPanel extends StatelessWidget {
                     ),
                   ],
                 ),
-                const SizedBox(height: 20),
+                const SizedBox(height: 16),
 
                 // Grams Field
                 TextFormField(
@@ -410,24 +415,24 @@ class CreditGramsPanel extends StatelessWidget {
 
                 // Info Card
                 Container(
-                  padding: const EdgeInsets.all(16),
+                  padding: const EdgeInsets.all(14),
                   decoration: BoxDecoration(
-                    color: AppColors.info.withValues(alpha: 0.1),
-                    borderRadius: BorderRadius.circular(12),
+                    color: AppColors.info.withValues(alpha: 0.06),
+                    borderRadius: BorderRadius.circular(10),
                     border: Border.all(
-                      color: AppColors.info.withValues(alpha: 0.3),
+                      color: AppColors.info.withValues(alpha: 0.15),
                     ),
                   ),
                   child: Row(
                     children: [
-                      Icon(Icons.info_outline, color: AppColors.info, size: 24),
-                      const SizedBox(width: 12),
+                      Icon(Icons.info_outline, color: AppColors.info, size: 18),
+                      const SizedBox(width: 10),
                       Expanded(
                         child: Text(
                           'Fee: ${AppConstants.buyFeePercent}% + ${AppConstants.vatPercent}% VAT\nTransaction will be auto-approved',
                           style: TextStyle(
                             color: AppColors.info,
-                            fontSize: 13,
+                            fontSize: 12,
                             height: 1.4,
                           ),
                         ),
@@ -435,13 +440,13 @@ class CreditGramsPanel extends StatelessWidget {
                     ],
                   ),
                 ),
-                const SizedBox(height: 32),
+                const SizedBox(height: 24),
 
                 // Submit Button
                 ElevatedButton(
                   onPressed: isLoading ? null : onCreditGrams,
                   style: ElevatedButton.styleFrom(
-                    padding: const EdgeInsets.symmetric(vertical: 16),
+                    padding: const EdgeInsets.symmetric(vertical: 14),
                     shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(12),
                     ),
@@ -474,7 +479,7 @@ class CreditGramsPanel extends StatelessWidget {
                         ),
                 ),
 
-                const SizedBox(height: 24),
+                const SizedBox(height: 20),
 
                 // Quick Tips
                 QuickTips(
@@ -488,7 +493,6 @@ class CreditGramsPanel extends StatelessWidget {
             ),
           ),
         ),
-      ),
     );
   }
 }

@@ -19,16 +19,21 @@ class RedeemCodePanel extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Card(
-      elevation: 2,
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-      child: Container(
-        decoration: BoxDecoration(
-          borderRadius: BorderRadius.circular(16),
-          color: AppColors.background,
-        ),
-        child: Padding(
-          padding: const EdgeInsets.all(24),
+    return Container(
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(20),
+        color: Colors.white,
+        border: Border.all(color: AppColors.grey200, width: 1),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.04),
+            blurRadius: 8,
+            offset: const Offset(0, 2),
+          ),
+        ],
+      ),
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 28, vertical: 24),
           child: Form(
             key: formKey,
             child: Column(
@@ -39,18 +44,18 @@ class RedeemCodePanel extends StatelessWidget {
                 Row(
                   children: [
                     Container(
-                      padding: const EdgeInsets.all(12),
+                      padding: const EdgeInsets.all(8),
                       decoration: BoxDecoration(
-                        color: AppColors.warning.withValues(alpha: 0.1),
-                        borderRadius: BorderRadius.circular(12),
+                        color: AppColors.warning.withValues(alpha: 0.08),
+                        borderRadius: BorderRadius.circular(10),
                       ),
                       child: Icon(
                         Icons.qr_code_scanner,
                         color: AppColors.warning,
-                        size: 28,
+                        size: 20,
                       ),
                     ),
-                    const SizedBox(width: 16),
+                    const SizedBox(width: 12),
                     Expanded(
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
@@ -59,17 +64,17 @@ class RedeemCodePanel extends StatelessWidget {
                             'Redeem Transaction Code',
                             style: Theme.of(context)
                                 .textTheme
-                                .headlineSmall
+                                .titleMedium
                                 ?.copyWith(
-                                  fontWeight: FontWeight.bold,
+                                  fontWeight: FontWeight.w600,
                                 ),
                           ),
-                          const SizedBox(height: 4),
+                          const SizedBox(height: 2),
                           Text(
                             'For store sell or exchange',
                             style: TextStyle(
-                              color: AppColors.grey600,
-                              fontSize: 14,
+                              color: AppColors.grey500,
+                              fontSize: 13,
                             ),
                           ),
                         ],
@@ -77,8 +82,8 @@ class RedeemCodePanel extends StatelessWidget {
                     ),
                     // Lottie Animation
                     SizedBox(
-                      width: 80,
-                      height: 80,
+                      width: 48,
+                      height: 48,
                       child: Lottie.asset(
                         'assets/lottie/Transaction Confirmation.json',
                         fit: BoxFit.contain,
@@ -86,16 +91,16 @@ class RedeemCodePanel extends StatelessWidget {
                     ),
                   ],
                 ),
-                const SizedBox(height: 32),
+                const SizedBox(height: 24),
 
                 // Code Field
                 TextFormField(
                   controller: codeController,
                   textCapitalization: TextCapitalization.characters,
                   style: const TextStyle(
-                    fontSize: 20,
+                    fontSize: 18,
                     fontWeight: FontWeight.bold,
-                    letterSpacing: 4,
+                    letterSpacing: 3,
                   ),
                   textAlign: TextAlign.center,
                   decoration: InputDecoration(
@@ -141,29 +146,29 @@ class RedeemCodePanel extends StatelessWidget {
                     );
                   },
                 ),
-                const SizedBox(height: 24),
+                const SizedBox(height: 20),
 
                 // Warning Card
                 Container(
-                  padding: const EdgeInsets.all(16),
+                  padding: const EdgeInsets.all(14),
                   decoration: BoxDecoration(
-                    color: AppColors.warning.withValues(alpha: 0.1),
-                    borderRadius: BorderRadius.circular(12),
+                    color: AppColors.warning.withValues(alpha: 0.06),
+                    borderRadius: BorderRadius.circular(10),
                     border: Border.all(
-                      color: AppColors.warning.withValues(alpha: 0.3),
+                      color: AppColors.warning.withValues(alpha: 0.15),
                     ),
                   ),
                   child: Row(
                     children: [
                       Icon(Icons.warning_amber_rounded,
-                          color: AppColors.warning, size: 24),
-                      const SizedBox(width: 12),
+                          color: AppColors.warning, size: 18),
+                      const SizedBox(width: 10),
                       Expanded(
                         child: Text(
                           'Redeeming will approve the transaction and consume locked grams',
                           style: TextStyle(
                             color: AppColors.warning,
-                            fontSize: 13,
+                            fontSize: 12,
                             height: 1.4,
                           ),
                         ),
@@ -171,13 +176,13 @@ class RedeemCodePanel extends StatelessWidget {
                     ],
                   ),
                 ),
-                const SizedBox(height: 32),
+                const SizedBox(height: 24),
 
                 // Submit Button
                 ElevatedButton(
                   onPressed: isLoading ? null : onRedeemCode,
                   style: ElevatedButton.styleFrom(
-                    padding: const EdgeInsets.symmetric(vertical: 16),
+                    padding: const EdgeInsets.symmetric(vertical: 14),
                     backgroundColor: AppColors.warning,
                     foregroundColor: Colors.white,
                     shape: RoundedRectangleBorder(
@@ -211,25 +216,25 @@ class RedeemCodePanel extends StatelessWidget {
                         ),
                 ),
 
-                const SizedBox(height: 24),
+                const SizedBox(height: 20),
 
                 // Expiry Warning
                 Container(
-                  padding: const EdgeInsets.all(16),
+                  padding: const EdgeInsets.all(14),
                   decoration: BoxDecoration(
-                    color: AppColors.error.withValues(alpha: 0.1),
-                    borderRadius: BorderRadius.circular(12),
+                    color: AppColors.error.withValues(alpha: 0.06),
+                    borderRadius: BorderRadius.circular(10),
                   ),
                   child: Row(
                     children: [
-                      Icon(Icons.schedule, color: AppColors.error, size: 20),
-                      const SizedBox(width: 12),
+                      Icon(Icons.schedule, color: AppColors.error, size: 18),
+                      const SizedBox(width: 10),
                       Expanded(
                         child: Text(
                           'Codes expire after 60 minutes',
                           style: TextStyle(
                             color: AppColors.error,
-                            fontSize: 13,
+                            fontSize: 12,
                             fontWeight: FontWeight.w600,
                           ),
                         ),
@@ -238,7 +243,7 @@ class RedeemCodePanel extends StatelessWidget {
                   ),
                 ),
 
-                const SizedBox(height: 24),
+                const SizedBox(height: 20),
 
                 // Instructions
                 const Instructions(),
@@ -246,7 +251,6 @@ class RedeemCodePanel extends StatelessWidget {
             ),
           ),
         ),
-      ),
     );
   }
 }
