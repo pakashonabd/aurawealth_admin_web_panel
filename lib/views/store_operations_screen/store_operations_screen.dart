@@ -300,14 +300,13 @@ class _StoreOperationsScreenState extends State<StoreOperationsScreen>
     );
 
     return Container(
-      color: AppColors.background,
+      color: AppColors.grey100.withValues(alpha: 0.5),
       child: Column(
         children: [
           // Animated Banner
           InfoBanner(tips: _tips, currentTipIndex: _currentTipIndex)
               .animate()
-              .fadeIn(duration: 600.ms)
-              .slideY(begin: -0.2, end: 0, duration: 600.ms),
+              .fadeIn(duration: 300.ms),
 
           // Main Content
           Expanded(
