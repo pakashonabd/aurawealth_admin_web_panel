@@ -7,4 +7,10 @@ class AppRoutes {
   static const String messages = '/messages';
   static const String storeOperations = '/store-operations';
   static const String notifications = '/notifications';
+  
+  // Payment routes
+  static const String paymentsList = '/payments';
+  static const String paymentDetail = '/payments/detail';
+  static const String paymentStats = '/payments/stats';
+  static const String webhookLogs = '/payments/webhook-logs';
 }

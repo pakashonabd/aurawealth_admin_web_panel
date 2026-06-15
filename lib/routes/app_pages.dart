@@ -4,6 +4,12 @@ import '../views/main_container.dart';
 import '../middleware/auth_middleware.dart';
 import '../controllers/auth_controller.dart';
 import '../controllers/navigation_controller.dart';
+import '../admin/payments/screens/payments_list_screen.dart';
+import '../admin/payments/screens/payment_detail_screen.dart';
+import '../admin/payments/screens/payment_stats_screen.dart';
+import '../admin/payments/screens/webhook_logs_screen.dart';
+import '../admin/payments/controllers/admin_payment_controller.dart';
+import '../admin/payments/services/admin_payment_service.dart';
 import 'app_routes.dart';
 
 // Main binding for all protected routes
@@ -60,6 +66,36 @@ class AppPages {
       page: () => MainContainer(),
       middlewares: [AuthMiddleware()],
       binding: MainBinding(),
+    ),
+    GetPage(
+      name: AppRoutes.paymentsList,
+      page: () => PaymentsListScreen(),
+      middlewares: [AuthMiddleware()],
+      binding: BindingsBuilder(() {
+        Get.lazyPut<AdminPaymentService>(() => AdminPaymentService(
+          baseUrl: Get.find<AuthController>().baseUrl,
+          tokenProvider: () => Get.find<AuthController>().token,
+        ));
+        Get.lazyPut<AdminPaymentController>(() => AdminPaymentController(Get.find()));
+      }),
+    ),
+    GetPage(
+      name: AppRoutes.paymentDetail,
+      page: () => PaymentDetailScreen(txId: Get.arguments ?? ''),
+      middlewares: [AuthMiddleware()],
+    ),
+    GetPage(
+      name: AppRoutes.paymentStats,
+      page: () => PaymentStatsScreen(),
+      middlewares: [AuthMiddleware()],
+      binding: BindingsBuilder(() {
+        Get.lazyPut<AdminPaymentController>(() => AdminPaymentController(Get.find()));
+      }),
+    ),
+    GetPage(
+      name: AppRoutes.webhookLogs,
+      page: () => WebhookLogsScreen(),
+      middlewares: [AuthMiddleware()],
     ),
   ];
 }
