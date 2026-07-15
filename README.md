@@ -7,6 +7,8 @@ A fully responsive admin web panel for AuraWealth - a 24 Carat Gold Investment P
 Complete setup in 3 simple steps:
 1. Install Flutter → 2. Configure API → 3. Run the app
 
+
+
 ---
 
 ## 🎯 Features
