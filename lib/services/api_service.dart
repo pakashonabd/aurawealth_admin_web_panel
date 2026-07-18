@@ -507,4 +507,16 @@ class ApiService {
       return _parseResponse(response) as Map<String, dynamic>;
     });
   }
+
+  Future<Map<String, dynamic>> updateKycStatus(String userId, String kycStatus) async {
+    return _safeNetworkCall(() async {
+      final url = Uri.parse(
+          '${AppConstants.baseUrl}${ApiEndpoints.adminUpdateKycStatus(userId)}');
+      final body = json.encode({'kyc_status': kycStatus});
+      final response = await http
+          .put(url, headers: _getHeaders(), body: body)
+          .timeout(Duration(seconds: AppConstants.apiTimeout));
+      return _parseResponse(response) as Map<String, dynamic>;
+    });
+  }
 }

@@ -20,10 +20,11 @@ class ApiEndpoints {
   static const String adminRedemptions = '/admin/redeem-coin';
   static String adminApproveRedemption(String txId) => '/admin/redeem-coin/$txId/approve';
   static String adminRejectRedemption(String txId) => '/admin/redeem-coin/$txId/reject';
-  static String adminUpdateDeliveryStatus(String txId) => '/admin/redeem-coin/$txId/status';
+  static String adminUpdateDeliveryStatus(String txId) => '/admin/redeem-coin/$txId/delivery-status';
 
   // User Management
   static const String getAllUsers = '/admin/users';
+  static String adminUpdateKycStatus(String userId) => '/admin/users/$userId/kyc-status';
 
   // Notifications & Device Management
   static const String sendNotification = '/admin/send-notification';

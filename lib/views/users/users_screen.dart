@@ -4,7 +4,9 @@ import 'package:fl_chart/fl_chart.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 import '../../controllers/user_controller.dart';
 import '../../core/constants/app_colors.dart';
+import '../../core/constants/api_endpoints.dart';
 import '../../core/utils/formatters.dart';
+import '../../services/api_service.dart';
 import '../../widgets/common/loading_widget.dart';
 import '../../widgets/common/error_widget.dart' as custom_error;
 import '../../widgets/common/animated_screen_wrapper.dart';
@@ -592,6 +594,7 @@ class _UsersScreenState extends State<UsersScreen> {
                       Icons.verified_user_outlined,
                       'OTP: ${_yesNo(user.otpVerified)}',
                     ),
+                    _buildKycStatusChip(user),
                     _detailChip(
                       Icons.account_balance_outlined,
                       user.bankName ?? 'No bank',
@@ -702,6 +705,82 @@ class _UsersScreenState extends State<UsersScreen> {
 
   String _yesNo(bool? value) =>
       value == null ? 'Unknown' : (value ? 'Yes' : 'No');
+
+  Widget _buildKycStatusChip(User user) {
+    final status = user.kycStatus.toUpperCase();
+    Color color;
+    switch (status) {
+      case 'VERIFIED':
+        color = AppColors.success;
+        break;
+      case 'PENDING':
+        color = AppColors.statusPending;
+        break;
+      case 'REJECTED':
+        color = AppColors.error;
+        break;
+      default:
+        color = AppColors.grey500;
+    }
+
+    return PopupMenuButton<String>(
+      onSelected: (newStatus) => _updateKycStatus(user.id, newStatus),
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 5),
+        decoration: BoxDecoration(
+          color: color.withOpacity(0.1),
+          borderRadius: BorderRadius.circular(20),
+          border: Border.all(color: color.withOpacity(0.3)),
+        ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(Icons.verified_user_outlined, size: 12, color: color),
+            const SizedBox(width: 4),
+            Text(
+              'KYC: $status',
+              style: TextStyle(
+                fontSize: 11,
+                fontWeight: FontWeight.w600,
+                color: color,
+              ),
+            ),
+            const SizedBox(width: 2),
+            Icon(Icons.arrow_drop_down, size: 14, color: color),
+          ],
+        ),
+      ),
+      itemBuilder: (context) => [
+        const PopupMenuItem(value: 'PENDING', child: Text('Pending')),
+        const PopupMenuItem(value: 'VERIFIED', child: Text('Verified')),
+        const PopupMenuItem(value: 'REJECTED', child: Text('Rejected')),
+        const PopupMenuItem(value: 'UNVERIFIED', child: Text('Unverified')),
+      ],
+    );
+  }
+
+  Future<void> _updateKycStatus(String userId, String status) async {
+    try {
+      final api = ApiService();
+      await api.updateKycStatus(userId, status);
+      Get.snackbar(
+        'KYC Updated',
+        'KYC status updated to $status',
+        backgroundColor: AppColors.success,
+        colorText: Colors.white,
+      );
+      // Refresh user data
+      final controller = Get.find<UserController>();
+      controller.refresh();
+    } catch (e) {
+      Get.snackbar(
+        'Error',
+        e.toString(),
+        backgroundColor: AppColors.error,
+        colorText: Colors.white,
+      );
+    }
+  }
 
   /// Helper widget to display user avatar with proper image loading
   Widget _buildUserAvatar(User user, {double radius = 24}) {
