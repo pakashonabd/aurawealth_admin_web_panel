@@ -14,7 +14,6 @@ class TypeBreakdownList extends StatelessWidget {
       ('BUY_IN_STORE', colBuyStore),
       ('SELL_TO_BANK', colSellBank),
       ('SELL_TO_STORE', colSellStore),
-      ('EXCHANGE_TO_JEWELLERY', colExchange),
     ];
     final total = transactions.length;
 

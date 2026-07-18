@@ -201,13 +201,6 @@ class GoldManagementScreen extends StatelessWidget {
               color: AppColors.error,
               subtitle: '${AppConstants.storeSellFeePercent}%',
             ),
-            ModernStatCard(
-              title: 'Exchange',
-              value: Formatters.formatCurrency(price.exchangePrice),
-              icon: Icons.swap_horiz_rounded,
-              color: Color(0xFF9C27B0),
-              subtitle: '${AppConstants.exchangeFeePercent}%',
-            ),
           ],
         );
       },
@@ -246,7 +239,6 @@ class GoldManagementScreen extends StatelessWidget {
       _BarData(0, 'Mkt', price.price, AppColors.primary),
       _BarData(1, 'Bnk', price.bankSellPrice, AppColors.success),
       _BarData(2, 'Str', price.storeSellPrice, AppColors.error),
-      _BarData(3, 'Exc', price.exchangePrice, Color(0xFF9C27B0)),
     ];
 
     return ChartCard(
@@ -291,7 +283,6 @@ class GoldManagementScreen extends StatelessWidget {
     final fees = [
       _PieData('Bank', AppConstants.bankSellFeePercent, AppColors.success),
       _PieData('Store', AppConstants.storeSellFeePercent, AppColors.error),
-      _PieData('Exc', AppConstants.exchangeFeePercent, Color(0xFF9C27B0)),
       _PieData('Buy', AppConstants.buyFeePercent, AppColors.warning),
     ];
 
@@ -396,8 +387,6 @@ class GoldManagementScreen extends StatelessWidget {
               Expanded(child: _buildInfoItem('MIN TRADE', '${AppConstants.minGrams} g', Icons.balance_rounded)),
               const SizedBox(width: 6),
               Expanded(child: _buildInfoItem('INCREMENT', '${AppConstants.gramsIncrement} g', Icons.add_circle_outline_rounded)),
-              const SizedBox(width: 6),
-              Expanded(child: _buildInfoItem('MIN EXCHANGE', '${AppConstants.minExchangeGrams} g', Icons.swap_horiz_rounded)),
             ],
           ),
         ],

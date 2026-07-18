@@ -63,7 +63,7 @@ class RedeemCodePanel extends StatelessWidget {
                             ?.copyWith(fontWeight: FontWeight.w600, fontSize: 15),
                       ),
                       Text(
-                        'For store sell or exchange',
+                        'For store sell',
                         style: TextStyle(color: AppColors.grey500, fontSize: 11),
                       ),
                     ],

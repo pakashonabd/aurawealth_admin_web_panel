@@ -20,7 +20,6 @@ class AppConstants {
   
   // Gold Constants
   static const double minGrams = 0.5;
-  static const double minExchangeGrams = 5.0;
   static const double gramsIncrement = 0.5;
   static const String goldType = '24 Carat';
   
@@ -29,7 +28,6 @@ class AppConstants {
   static const double vatPercent = 7.5;
   static const double bankSellFeePercent = 2.0;
   static const double storeSellFeePercent = 17.0;
-  static const double exchangeFeePercent = 10.0;
   
   // UI Constants
   static const double borderRadius = 12.0;

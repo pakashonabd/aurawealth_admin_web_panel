@@ -207,7 +207,7 @@ class UsersScreen extends StatelessWidget {
       (sum, tx) {
         if (tx.type.contains('BUY') && tx.status != 'REJECTED') {
           return sum + tx.grams;
-        } else if ((tx.type.contains('SELL') || tx.type.contains('EXCHANGE'))
+        } else if (tx.type.contains('SELL')
             && tx.status != 'REJECTED' && tx.status != 'PENDING') {
           return sum - tx.grams;
         }

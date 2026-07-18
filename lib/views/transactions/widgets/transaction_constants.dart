@@ -68,6 +68,7 @@ Color typeColor(String t) {
     case 'SELL_TO_BANK':          return colSellBank;
     case 'SELL_TO_STORE':         return colSellStore;
     case 'EXCHANGE_TO_JEWELLERY': return colExchange;
+    case 'REDEEM_COIN':           return colSellBank;
     default:                      return textSec;
   }
 }
@@ -79,6 +80,7 @@ String typeLabel(String t) {
     case 'SELL_TO_BANK':          return 'Sell to Bank';
     case 'SELL_TO_STORE':         return 'Sell to Store';
     case 'EXCHANGE_TO_JEWELLERY': return 'Exchange';
+    case 'REDEEM_COIN':           return 'Redeem Coin';
     default:
       return t.replaceAll('_', ' ').split(' ').map((w) =>
       w.isEmpty ? '' : '${w[0].toUpperCase()}${w.substring(1).toLowerCase()}'
@@ -93,6 +95,7 @@ String pngForType(String t) {
     case 'SELL_TO_BANK':          return pngSellBank;
     case 'SELL_TO_STORE':         return pngSellStore;
     case 'EXCHANGE_TO_JEWELLERY': return pngExchange;
+    case 'REDEEM_COIN':           return pngSellBank;
     default:                      return pngExchange;
   }
 }
@@ -104,6 +107,7 @@ IconData iconForType(String t) {
     case 'SELL_TO_BANK':          return Icons.account_balance_rounded;
     case 'SELL_TO_STORE':         return Icons.storefront_rounded;
     case 'EXCHANGE_TO_JEWELLERY': return Icons.swap_horiz_rounded;
+    case 'REDEEM_COIN':           return Icons.monetization_on_rounded;
     default:                      return Icons.receipt_long_rounded;
   }
 }

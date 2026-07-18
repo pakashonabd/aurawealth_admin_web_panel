@@ -1,14 +1,12 @@
 class GoldPrice {
   final double price;
   final double bankSellPrice;
-  final double exchangePrice;
   final double storeSellPrice;
   final DateTime createdAt;
 
   GoldPrice({
     required this.price,
     required this.bankSellPrice,
-    required this.exchangePrice,
     required this.storeSellPrice,
     required this.createdAt,
   });
@@ -31,7 +29,6 @@ class GoldPrice {
     return GoldPrice(
       price: _toDouble(json['price']),
       bankSellPrice: _toDouble(json['bank_sell_price']),
-      exchangePrice: _toDouble(json['exchange_price']),
       storeSellPrice: _toDouble(json['store_sell_price']),
       createdAt: createdAt,
     );
@@ -41,7 +38,6 @@ class GoldPrice {
     return {
       'price': price,
       'bank_sell_price': bankSellPrice,
-      'exchange_price': exchangePrice,
       'store_sell_price': storeSellPrice,
       'created_at': createdAt.toIso8601String(),
     };

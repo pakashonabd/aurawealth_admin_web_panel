@@ -16,6 +16,12 @@ class ApiEndpoints {
   static String adminReject(String txId) => '/admin/$txId/reject';
   static String adminPaidStatus(String txId) => '/admin/$txId/paid-status';
 
+  // Redemption Management
+  static const String adminRedemptions = '/admin/redeem-coin';
+  static String adminApproveRedemption(String txId) => '/admin/redeem-coin/$txId/approve';
+  static String adminRejectRedemption(String txId) => '/admin/redeem-coin/$txId/reject';
+  static String adminUpdateDeliveryStatus(String txId) => '/admin/redeem-coin/$txId/status';
+
   // User Management
   static const String getAllUsers = '/admin/users';
 

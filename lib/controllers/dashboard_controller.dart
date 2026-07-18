@@ -19,7 +19,6 @@ class DashboardController extends GetxController {
   final RxInt    totalTransactions         = 0.obs;
   final RxInt    totalBuyTransactions      = 0.obs;
   final RxInt    totalSellTransactions     = 0.obs;
-  final RxInt    totalExchangeTransactions = 0.obs;
   final RxInt    totalPendingTransactions  = 0.obs;
   final RxDouble totalGoldHoldings         = 0.0.obs;
   final RxDouble totalRevenue              = 0.0.obs;
@@ -46,7 +45,6 @@ class DashboardController extends GetxController {
       totalTransactions.value         = all.length;
       totalBuyTransactions.value      = all.where((t) => t.type.contains('BUY')).length;
       totalSellTransactions.value     = all.where((t) => t.type.contains('SELL')).length;
-      totalExchangeTransactions.value = all.where((t) => t.type.contains('EXCHANGE')).length;
       totalPendingTransactions.value  = all.where((t) => t.status == 'PENDING').length;
 
       // ── gold holdings ──────────────────────────────────────────────────
@@ -55,10 +53,10 @@ class DashboardController extends GetxController {
           .where((t) => t.type.contains('BUY') && t.status != 'REJECTED')
           .fold(0.0, (sum, t) => sum + t.grams);
 
-      // Grams removed = all SELL/EXCHANGE that are APPROVED or PAID
+      // Grams removed = all SELL that are APPROVED or PAID
       final sellGrams = all
           .where((t) =>
-              (t.type.contains('SELL') || t.type.contains('EXCHANGE')) &&
+              t.type.contains('SELL') &&
               (t.status == 'APPROVED' || t.status == 'PAID'))
           .fold(0.0, (sum, t) => sum + t.grams);
 

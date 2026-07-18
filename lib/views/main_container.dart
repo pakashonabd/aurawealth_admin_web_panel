@@ -20,6 +20,7 @@ import 'gold_management/gold_management_screen.dart';
 import 'messages/messages_screen.dart';
 import 'notifications/notifications_screen.dart';
 import 'store_operations_screen/store_operations_screen.dart';
+import 'redemption/redemption_screen.dart';
 
 class MainContainer extends StatelessWidget {
   MainContainer({Key? key}) : super(key: key);
@@ -43,6 +44,7 @@ class MainContainer extends StatelessWidget {
         AppRoutes.messages,
         AppRoutes.notifications,
         AppRoutes.storeOperations,
+        AppRoutes.redemptions,
       ];
       if (validRoutes.contains(urlRoute) &&
           urlRoute != AppRoutes.dashboard &&
@@ -184,6 +186,8 @@ class MainContainer extends StatelessWidget {
         return 'Push Notifications';
       case AppRoutes.storeOperations:
         return 'Store Operations';
+      case AppRoutes.redemptions:
+        return 'Redemptions';
       default:
         return 'Dashboard';
     }
@@ -237,6 +241,9 @@ class MainContainer extends StatelessWidget {
 
       case AppRoutes.storeOperations:
         return StoreOperationsScreen();
+
+      case AppRoutes.redemptions:
+        return const RedemptionScreen();
 
       default:
         if (!Get.isRegistered<DashboardController>()) {

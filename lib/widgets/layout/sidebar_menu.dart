@@ -82,6 +82,11 @@ class _SidebarMenuState extends State<SidebarMenu> with SingleTickerProviderStat
       icon: Icons.store_outlined,
       route: AppRoutes.storeOperations,
     ),
+    MenuItem(
+      title: 'Redemptions',
+      icon: Icons.monetization_on_outlined,
+      route: AppRoutes.redemptions,
+    ),
   ];
 
   @override

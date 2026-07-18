@@ -13,12 +13,11 @@ class VolumeByTypeChart extends StatelessWidget {
     final types = [
       'BUY_IN_APP', 'BUY_IN_STORE',
       'SELL_TO_BANK', 'SELL_TO_STORE',
-      'EXCHANGE_TO_JEWELLERY',
     ];
     final colors = [
-      colBuyApp, colBuyStore, colSellBank, colSellStore, colExchange,
+      colBuyApp, colBuyStore, colSellBank, colSellStore,
     ];
-    final labels = ['App', 'Store', 'Bank', 'Sell', 'Exch'];
+    final labels = ['App', 'Store', 'Bank', 'Sell'];
 
     final counts = types
         .map((t) => transactions.where((tx) => tx.type.toUpperCase() == t).length)

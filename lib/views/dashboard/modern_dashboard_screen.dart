@@ -492,7 +492,7 @@ class ModernDashboardScreen extends StatelessWidget {
                     sideTitles: SideTitles(
                       showTitles: true,
                       getTitlesWidget: (value, meta) {
-                        const titles = ['Buy', 'Sell', 'Exchange'];
+                        const titles = ['Buy', 'Sell'];
                         if (value.toInt() >= 0 && value.toInt() < titles.length) {
                           return Padding(
                             padding: const EdgeInsets.only(top: 8),
@@ -563,21 +563,6 @@ class ModernDashboardScreen extends StatelessWidget {
                         toY: controller.totalSellTransactions.value.toDouble(),
                         gradient: const LinearGradient(
                           colors: [Color(0xFFf093fb), Color(0xFFf5576c)],
-                          begin: Alignment.bottomCenter,
-                          end: Alignment.topCenter,
-                        ),
-                        width: 40,
-                        borderRadius: const BorderRadius.vertical(top: Radius.circular(8)),
-                      ),
-                    ],
-                  ),
-                  BarChartGroupData(
-                    x: 2,
-                    barRods: [
-                      BarChartRodData(
-                        toY: controller.totalExchangeTransactions.value.toDouble(),
-                        gradient: const LinearGradient(
-                          colors: [Color(0xFF4facfe), Color(0xFF00f2fe)],
                           begin: Alignment.bottomCenter,
                           end: Alignment.topCenter,
                         ),

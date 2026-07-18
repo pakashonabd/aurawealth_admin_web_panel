@@ -413,4 +413,56 @@ class ApiService {
         .timeout(Duration(seconds: AppConstants.apiTimeout));
     return _parseResponse(response);
   }
+
+  // ============================
+  // REDEMPTION MANAGEMENT
+  // ============================
+
+  Future<Map<String, dynamic>> getRedemptions({
+    String? status,
+    String? search,
+    int skip = 0,
+    int limit = 100,
+  }) async {
+    final queryParams = <String, String>{
+      'skip': skip.toString(),
+      'limit': limit.toString(),
+    };
+    if (status != null && status.isNotEmpty) queryParams['status'] = status;
+    if (search != null && search.trim().isNotEmpty) queryParams['search'] = search.trim();
+
+    final uri = Uri.parse('${AppConstants.baseUrl}${ApiEndpoints.adminRedemptions}')
+        .replace(queryParameters: queryParams);
+    final response = await http
+        .get(uri, headers: _getHeaders())
+        .timeout(Duration(seconds: AppConstants.apiTimeout));
+    return _parseResponse(response) as Map<String, dynamic>;
+  }
+
+  Future<Map<String, dynamic>> approveRedemption(String txId, {String? note}) async {
+    final url = Uri.parse('${AppConstants.baseUrl}${ApiEndpoints.adminApproveRedemption(txId)}');
+    final body = json.encode(note != null ? {'note': note} : <String, dynamic>{});
+    final response = await http
+        .put(url, headers: _getHeaders(), body: body)
+        .timeout(Duration(seconds: AppConstants.apiTimeout));
+    return _parseResponse(response) as Map<String, dynamic>;
+  }
+
+  Future<Map<String, dynamic>> rejectRedemption(String txId, {required String note}) async {
+    final url = Uri.parse('${AppConstants.baseUrl}${ApiEndpoints.adminRejectRedemption(txId)}');
+    final body = json.encode({'note': note});
+    final response = await http
+        .put(url, headers: _getHeaders(), body: body)
+        .timeout(Duration(seconds: AppConstants.apiTimeout));
+    return _parseResponse(response) as Map<String, dynamic>;
+  }
+
+  Future<Map<String, dynamic>> updateDeliveryStatus(String txId, String deliveryStatus) async {
+    final url = Uri.parse('${AppConstants.baseUrl}${ApiEndpoints.adminUpdateDeliveryStatus(txId)}');
+    final body = json.encode({'delivery_status': deliveryStatus});
+    final response = await http
+        .put(url, headers: _getHeaders(), body: body)
+        .timeout(Duration(seconds: AppConstants.apiTimeout));
+    return _parseResponse(response) as Map<String, dynamic>;
+  }
 }

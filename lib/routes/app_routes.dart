@@ -7,6 +7,7 @@ class AppRoutes {
   static const String messages = '/messages';
   static const String storeOperations = '/store-operations';
   static const String notifications = '/notifications';
+  static const String redemptions = '/redemptions';
   
   // Payment routes
   static const String paymentsList = '/payments';
