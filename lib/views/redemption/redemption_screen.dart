@@ -4,7 +4,6 @@ import 'package:flutter_animate/flutter_animate.dart';
 import '../../models/redemption.dart';
 import '../../services/api_service.dart';
 import '../../core/constants/app_colors.dart';
-import '../../core/constants/app_constants.dart';
 
 class RedemptionScreen extends StatefulWidget {
   const RedemptionScreen({Key? key}) : super(key: key);
@@ -40,7 +39,13 @@ class _RedemptionScreenState extends State<RedemptionScreen> {
           .toList();
       setState(() { _redemptions = list; _isLoading = false; });
     } catch (e) {
-      setState(() { _error = e.toString(); _isLoading = false; });
+      final msg = e.toString();
+      final friendly = msg.contains('Unable to reach') ||
+              msg.contains('timed out') ||
+              msg.contains('unavailable')
+          ? msg
+          : 'Something went wrong. Please try again.';
+      setState(() { _error = friendly; _isLoading = false; });
     }
   }
 

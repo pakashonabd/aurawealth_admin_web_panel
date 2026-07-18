@@ -278,11 +278,9 @@ class _TargetedNotificationCardState extends State<TargetedNotificationCard> {
   }
 
   Widget _imageToggle() {
-    return Container(
-      decoration: BoxDecoration(
-        color: AppColors.grey100,
-        borderRadius: BorderRadius.circular(12),
-      ),
+    return Material(
+      color: AppColors.grey100,
+      borderRadius: BorderRadius.circular(12),
       child: SwitchListTile(
         value: _includeImage,
         onChanged: (v) => setState(() => _includeImage = v),

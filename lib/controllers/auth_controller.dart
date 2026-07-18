@@ -5,6 +5,7 @@ import '../services/api_service.dart';
 import '../services/storage_service.dart';
 import '../services/admin_fcm_service.dart';
 import '../routes/app_routes.dart';
+import '../core/constants/app_constants.dart';
 
 class AuthController extends GetxController {
   final ApiService _apiService = ApiService();
@@ -13,6 +14,9 @@ class AuthController extends GetxController {
   final RxBool isLoading = false.obs;
   final RxString errorMessage = ''.obs;
   final RxBool isAuthenticated = false.obs;
+
+  String get baseUrl => AppConstants.baseUrl;
+  String get token => _storage.getAuthToken() ?? '';
 
   @override
   void onInit() {

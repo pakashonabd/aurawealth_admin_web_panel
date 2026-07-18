@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:convert';
 import 'package:get/get.dart';
 import 'package:http/http.dart' as http;
@@ -71,6 +72,32 @@ class ApiService {
             : 'HTTP ${response.statusCode}';
       }
       throw Exception(errorMessage);
+    }
+  }
+
+  /// Wraps a network call to provide user-friendly error messages
+  /// for common failure modes (no internet, timeout, server unreachable).
+  Future<T> _safeNetworkCall<T>(Future<T> Function() call) async {
+    try {
+      return await call();
+    } on http.ClientException catch (_) {
+      throw Exception(
+        'Unable to reach the server. Please check your internet connection and try again.',
+      );
+    } on TimeoutException catch (_) {
+      throw Exception(
+        'Request timed out. The server may be starting up — please try again in a moment.',
+      );
+    } on SessionExpiredException {
+      rethrow;
+    } catch (e) {
+      if (e.toString().contains('Failed to fetch') ||
+          e.toString().contains('ClientException')) {
+        throw Exception(
+          'Unable to connect to the server. It may be temporarily unavailable — please try again.',
+        );
+      }
+      rethrow;
     }
   }
 
@@ -424,45 +451,60 @@ class ApiService {
     int skip = 0,
     int limit = 100,
   }) async {
-    final queryParams = <String, String>{
-      'skip': skip.toString(),
-      'limit': limit.toString(),
-    };
-    if (status != null && status.isNotEmpty) queryParams['status'] = status;
-    if (search != null && search.trim().isNotEmpty) queryParams['search'] = search.trim();
+    return _safeNetworkCall(() async {
+      final queryParams = <String, String>{
+        'skip': skip.toString(),
+        'limit': limit.toString(),
+      };
+      if (status != null && status.isNotEmpty) queryParams['status'] = status;
+      if (search != null && search.trim().isNotEmpty) {
+        queryParams['search'] = search.trim();
+      }
 
-    final uri = Uri.parse('${AppConstants.baseUrl}${ApiEndpoints.adminRedemptions}')
-        .replace(queryParameters: queryParams);
-    final response = await http
-        .get(uri, headers: _getHeaders())
-        .timeout(Duration(seconds: AppConstants.apiTimeout));
-    return _parseResponse(response) as Map<String, dynamic>;
+      final uri = Uri.parse(
+              '${AppConstants.baseUrl}${ApiEndpoints.adminRedemptions}')
+          .replace(queryParameters: queryParams);
+      final response = await http
+          .get(uri, headers: _getHeaders())
+          .timeout(Duration(seconds: AppConstants.apiTimeout));
+      return _parseResponse(response) as Map<String, dynamic>;
+    });
   }
 
   Future<Map<String, dynamic>> approveRedemption(String txId, {String? note}) async {
-    final url = Uri.parse('${AppConstants.baseUrl}${ApiEndpoints.adminApproveRedemption(txId)}');
-    final body = json.encode(note != null ? {'note': note} : <String, dynamic>{});
-    final response = await http
-        .put(url, headers: _getHeaders(), body: body)
-        .timeout(Duration(seconds: AppConstants.apiTimeout));
-    return _parseResponse(response) as Map<String, dynamic>;
+    return _safeNetworkCall(() async {
+      final url = Uri.parse(
+          '${AppConstants.baseUrl}${ApiEndpoints.adminApproveRedemption(txId)}');
+      final body = json.encode(
+          note != null ? {'note': note} : <String, dynamic>{});
+      final response = await http
+          .put(url, headers: _getHeaders(), body: body)
+          .timeout(Duration(seconds: AppConstants.apiTimeout));
+      return _parseResponse(response) as Map<String, dynamic>;
+    });
   }
 
   Future<Map<String, dynamic>> rejectRedemption(String txId, {required String note}) async {
-    final url = Uri.parse('${AppConstants.baseUrl}${ApiEndpoints.adminRejectRedemption(txId)}');
-    final body = json.encode({'note': note});
-    final response = await http
-        .put(url, headers: _getHeaders(), body: body)
-        .timeout(Duration(seconds: AppConstants.apiTimeout));
-    return _parseResponse(response) as Map<String, dynamic>;
+    return _safeNetworkCall(() async {
+      final url = Uri.parse(
+          '${AppConstants.baseUrl}${ApiEndpoints.adminRejectRedemption(txId)}');
+      final body = json.encode({'note': note});
+      final response = await http
+          .put(url, headers: _getHeaders(), body: body)
+          .timeout(Duration(seconds: AppConstants.apiTimeout));
+      return _parseResponse(response) as Map<String, dynamic>;
+    });
   }
 
   Future<Map<String, dynamic>> updateDeliveryStatus(String txId, String deliveryStatus) async {
-    final url = Uri.parse('${AppConstants.baseUrl}${ApiEndpoints.adminUpdateDeliveryStatus(txId)}');
-    final body = json.encode({'delivery_status': deliveryStatus});
-    final response = await http
-        .put(url, headers: _getHeaders(), body: body)
-        .timeout(Duration(seconds: AppConstants.apiTimeout));
-    return _parseResponse(response) as Map<String, dynamic>;
+    return _safeNetworkCall(() async {
+      final url = Uri.parse(
+          '${AppConstants.baseUrl}${ApiEndpoints.adminUpdateDeliveryStatus(txId)}');
+      final body = json.encode({'delivery_status': deliveryStatus});
+      final response = await http
+          .put(url, headers: _getHeaders(), body: body)
+          .timeout(Duration(seconds: AppConstants.apiTimeout));
+      return _parseResponse(response) as Map<String, dynamic>;
+    });
   }
 }
