@@ -24,7 +24,6 @@ class ApiEndpoints {
 
   // User Management
   static const String getAllUsers = '/admin/users';
-  static String adminUpdateKycStatus(String userId) => '/admin/users/$userId/kyc-status';
 
   // Notifications & Device Management
   static const String sendNotification = '/admin/send-notification';

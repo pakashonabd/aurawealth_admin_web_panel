@@ -2,11 +2,10 @@ import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:fl_chart/fl_chart.dart';
 import 'package:flutter_animate/flutter_animate.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 import '../../controllers/user_controller.dart';
 import '../../core/constants/app_colors.dart';
-import '../../core/constants/api_endpoints.dart';
 import '../../core/utils/formatters.dart';
-import '../../services/api_service.dart';
 import '../../widgets/common/loading_widget.dart';
 import '../../widgets/common/error_widget.dart' as custom_error;
 import '../../widgets/common/animated_screen_wrapper.dart';
@@ -761,8 +760,21 @@ class _UsersScreenState extends State<UsersScreen> {
 
   Future<void> _updateKycStatus(String userId, String status) async {
     try {
-      final api = ApiService();
-      await api.updateKycStatus(userId, status);
+      final fs = FirebaseFirestore.instance;
+      final docRef = fs.collection('users').document(userId);
+      final doc = await docRef.get();
+
+      if (!doc.exists) {
+        Get.snackbar('Error', 'User not found in Firestore',
+            backgroundColor: AppColors.error, colorText: Colors.white);
+        return;
+      }
+
+      await docRef.update({
+        'kycStatus': status.toLowerCase(),
+        'kycVerifiedAt': FieldValue.serverTimestamp(),
+      });
+
       Get.snackbar(
         'KYC Updated',
         'KYC status updated to $status',
