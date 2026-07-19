@@ -33,33 +33,21 @@ class AuthController extends GetxController {
       isLoading.value = true;
       errorMessage.value = '';
 
-      print('[Auth] Login started for: $email');
       final response = await _apiService.adminLogin(email, password);
-      print('[Auth] Login response keys: ${response.keys.toList()}');
 
       final token = response['access_token'];
       if (token != null) {
-        print('[Auth] Access token received; saving auth state');
         await _storage.saveAuthToken(token);
         await _storage.saveUserEmail(email);
         isAuthenticated.value = true;
-        print(
-          '[Auth] Auth state saved. Calling initAdminFCM() after Firebase initialization',
-        );
-        print(
-          '[Auth] initAdminFCM() call condition met: login succeeded and access_token saved',
-        );
-        await initAdminFCM();
-        print('[Auth] initAdminFCM() completed. Navigating to dashboard');
 
+        // Navigate FIRST — FCM init runs in background, never blocks login
         Get.offAllNamed(AppRoutes.dashboard);
+        initAdminFCM();
       } else {
-        print('[Auth] Login response missing access_token: $response');
         throw Exception('Invalid response from server');
       }
-    } catch (e, stackTrace) {
-      print('[Auth] Login failed or post-login setup failed: $e');
-      print('[Auth] Login stack trace: $stackTrace');
+    } catch (e) {
       errorMessage.value = e.toString().replaceAll('Exception: ', '');
     } finally {
       isLoading.value = false;
@@ -68,12 +56,9 @@ class AuthController extends GetxController {
 
   Future<void> initAdminFCM() async {
     try {
-      print('[Auth] initAdminFCM() started');
       await AdminFcmService.initialize();
-      print('[Auth] initAdminFCM() finished successfully');
-    } catch (e, stackTrace) {
-      print('[Auth] initAdminFCM() threw an exception: $e');
-      print('[Auth] initAdminFCM() stack trace: $stackTrace');
+    } catch (_) {
+      // FCM init is non-critical — swallow errors silently
     }
   }
 

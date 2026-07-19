@@ -15,30 +15,21 @@ void main() async {
   await StorageService().init();
 
   try {
-    print('[Firebase] initializeApp() starting');
-    print('[Firebase] Apps before initializeApp(): ${Firebase.apps.length}');
     if (Firebase.apps.isEmpty) {
       await Firebase.initializeApp(
         options: DefaultFirebaseOptions.currentPlatform,
       );
-      print('[Firebase] initializeApp() completed successfully');
-    } else {
-      print(
-        '[Firebase] initializeApp() skipped because Firebase app already exists',
-      );
     }
-    print('[Firebase] Apps after initializeApp(): ${Firebase.apps.length}');
-  } catch (e, stackTrace) {
-    print('[Firebase] initializeApp() failed: $e');
-    print('[Firebase] initializeApp() stack trace: $stackTrace');
+  } catch (e) {
     rethrow;
   }
 
-  if (StorageService().isAuthenticated) {
-    await AdminFcmService.initialize();
-  }
-
   runApp(const MyApp());
+
+  // Init FCM in background — never block app launch for this
+  if (StorageService().isAuthenticated) {
+    AdminFcmService.initialize();
+  }
 }
 
 class MyApp extends StatelessWidget {
