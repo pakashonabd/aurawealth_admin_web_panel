@@ -15,6 +15,7 @@ class AppColors {
   static const Color info = Color(0xFF2196F3);
   
   // Neutral Shades
+  static const Color grey50 = Color(0xFFFAFAFA);
   static const Color grey100 = Color(0xFFF5F5F5);
   static const Color grey200 = Color(0xFFEEEEEE);
   static const Color grey300 = Color(0xFFE0E0E0);

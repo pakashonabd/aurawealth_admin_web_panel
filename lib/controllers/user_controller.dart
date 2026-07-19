@@ -113,6 +113,45 @@ class UserController extends GetxController {
     );
   }
 
+  void updateKycStatus(String userId, String newStatus) {
+    final index = users.indexWhere(
+      (u) => u.id == userId || u.backendId == userId || u.firebaseUid == userId,
+    );
+    if (index == -1) return;
+
+    final old = users[index];
+    final updated = User(
+      id: old.id,
+      backendId: old.backendId,
+      firebaseUid: old.firebaseUid,
+      role: old.role,
+      isAdmin: old.isAdmin,
+      name: old.name,
+      email: old.email,
+      phoneNumber: old.phoneNumber,
+      photoUrl: old.photoUrl,
+      accountNumber: old.accountNumber,
+      bankName: old.bankName,
+      nationalId: old.nationalId,
+      nidFrontUrl: old.nidFrontUrl,
+      nidBackUrl: old.nidBackUrl,
+      createdAt: old.createdAt,
+      lastLogin: old.lastLogin,
+      hasFingerprint: old.hasFingerprint,
+      hasPasscode: old.hasPasscode,
+      otpVerified: old.otpVerified,
+      phoneVerified: old.phoneVerified,
+      kycStatus: newStatus.toLowerCase(),
+      totalGrams: old.totalGrams,
+      lockedGrams: old.lockedGrams,
+      availableGrams: old.availableGrams,
+      walletUpdatedAt: old.walletUpdatedAt,
+    );
+
+    users[index] = updated;
+    applyFilters();
+  }
+
   void refresh() {
     loadUsers();
   }

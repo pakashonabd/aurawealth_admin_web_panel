@@ -73,7 +73,7 @@ class _UsersScreenState extends State<UsersScreen> {
                           AnimatedEntrance(
                             animationType: AnimationType.scaleFade,
                             delay: 300.ms,
-                            child: _buildPieChart(activeUsers, totalUsers),
+                            child: _buildPieChart(controller),
                           ),
                           const SizedBox(height: 12),
                           AnimatedEntrance(
@@ -90,7 +90,7 @@ class _UsersScreenState extends State<UsersScreen> {
                           child: AnimatedEntrance(
                             animationType: AnimationType.fadeSlideLeft,
                             delay: 300.ms,
-                            child: _buildPieChart(activeUsers, totalUsers),
+                            child: _buildPieChart(controller),
                           ),
                         ),
                         const SizedBox(width: 12),
@@ -274,11 +274,28 @@ class _UsersScreenState extends State<UsersScreen> {
     ).animate().fadeIn(duration: 300.ms).slideX(begin: 0.1);
   }
 
-  // ── Line Chart (Enhanced with more values) ────────────────────────────────
+  // ── Line Chart: User Registrations (last 7 days) ──────────────────────────
   Widget _buildLineChart(UserController controller) {
+    // Compute real data: registrations per day for the last 7 days
+    final now = DateTime.now();
+    final labels = <String>[];
+    final counts = <double>[];
+    for (int i = 6; i >= 0; i--) {
+      final day = now.subtract(Duration(days: i));
+      final dayStart = DateTime(day.year, day.month, day.day);
+      final dayEnd = dayStart.add(const Duration(days: 1));
+      final count = controller.users.where((u) {
+        return u.createdAt.isAfter(dayStart.subtract(const Duration(seconds: 1))) &&
+            u.createdAt.isBefore(dayEnd);
+      }).length;
+      labels.add('${day.day}/${day.month}');
+      counts.add(count.toDouble());
+    }
+    final maxY = counts.isEmpty ? 5.0 : (counts.reduce((a, b) => a > b ? a : b) + 2).ceilToDouble();
+
     return Container(
-      height: 200,
-      padding: const EdgeInsets.fromLTRB(10, 20, 20, 10),
+      height: 240,
+      padding: const EdgeInsets.fromLTRB(10, 16, 20, 10),
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(18),
@@ -286,154 +303,397 @@ class _UsersScreenState extends State<UsersScreen> {
           BoxShadow(color: Colors.black.withOpacity(0.02), blurRadius: 15),
         ],
       ),
-      child: LineChart(
-        LineChartData(
-          gridData: FlGridData(
-            show: true,
-            drawVerticalLine: false,
-            horizontalInterval: 2,
-            getDrawingHorizontalLine: (v) =>
-                FlLine(color: Colors.grey.withOpacity(0.05), strokeWidth: 1),
-          ),
-          titlesData: FlTitlesData(
-            rightTitles: AxisTitles(sideTitles: SideTitles(showTitles: false)),
-            topTitles: AxisTitles(sideTitles: SideTitles(showTitles: false)),
-            bottomTitles: AxisTitles(
-              sideTitles: SideTitles(
-                showTitles: true,
-                getTitlesWidget: (v, m) {
-                  const days = [
-                    '1 Mar',
-                    '2 Mar',
-                    '3 Mar',
-                    '4 Mar',
-                    '5 Mar',
-                    '6 Mar',
-                    '7 Mar',
-                  ];
-                  return Text(
-                    days[v.toInt() % 7],
-                    style: const TextStyle(color: Colors.grey, fontSize: 9),
-                  );
-                },
-              ),
-            ),
-          ),
-          borderData: FlBorderData(show: false),
-          lineBarsData: [
-            LineChartBarData(
-              spots: const [
-                FlSpot(0, 2),
-                FlSpot(1, 1.5),
-                FlSpot(2, 4),
-                FlSpot(3, 3),
-                FlSpot(4, 5),
-                FlSpot(5, 4),
-                FlSpot(6, 6),
-              ],
-              isCurved: true,
-              gradient: const LinearGradient(
-                colors: [Color(0xFF2196F3), Color(0xFF00BCD4)],
-              ),
-              barWidth: 3,
-              dotData: FlDotData(show: true),
-              belowBarData: BarAreaData(
-                show: true,
-                gradient: LinearGradient(
-                  colors: [
-                    const Color(0xFF2196F3).withOpacity(0.15),
-                    const Color(0xFF2196F3).withOpacity(0),
-                  ],
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Padding(
+            padding: const EdgeInsets.only(left: 6, bottom: 8),
+            child: Row(
+              children: [
+                Icon(Icons.show_chart_rounded, size: 16, color: AppColors.primary),
+                const SizedBox(width: 6),
+                Text(
+                  'User Registrations',
+                  style: TextStyle(
+                    fontSize: 13,
+                    fontWeight: FontWeight.w700,
+                    color: AppColors.textPrimary,
+                  ),
                 ),
+                const SizedBox(width: 6),
+                Text(
+                  '(Last 7 days)',
+                  style: TextStyle(
+                    fontSize: 11,
+                    color: AppColors.grey500,
+                  ),
+                ),
+              ],
+            ),
+          ),
+          Expanded(
+            child: LineChart(
+              LineChartData(
+                gridData: FlGridData(
+                  show: true,
+                  drawVerticalLine: false,
+                  horizontalInterval: (maxY / 4).ceilToDouble().clamp(1, double.infinity),
+                  getDrawingHorizontalLine: (v) =>
+                      FlLine(color: Colors.grey.withOpacity(0.08), strokeWidth: 1),
+                ),
+                titlesData: FlTitlesData(
+                  rightTitles: AxisTitles(sideTitles: SideTitles(showTitles: false)),
+                  topTitles: AxisTitles(sideTitles: SideTitles(showTitles: false)),
+                  leftTitles: AxisTitles(
+                    sideTitles: SideTitles(
+                      showTitles: true,
+                      reservedSize: 28,
+                      interval: (maxY / 4).ceilToDouble().clamp(1, double.infinity),
+                      getTitlesWidget: (v, m) {
+                        if (v == v.roundToDouble()) {
+                          return Text(
+                            v.toInt().toString(),
+                            style: const TextStyle(color: Colors.grey, fontSize: 9),
+                          );
+                        }
+                        return const SizedBox.shrink();
+                      },
+                    ),
+                  ),
+                  bottomTitles: AxisTitles(
+                    sideTitles: SideTitles(
+                      showTitles: true,
+                      getTitlesWidget: (v, m) {
+                        final idx = v.toInt();
+                        if (idx >= 0 && idx < labels.length) {
+                          return Padding(
+                            padding: const EdgeInsets.only(top: 4),
+                            child: Text(
+                              labels[idx],
+                              style: const TextStyle(color: Colors.grey, fontSize: 9),
+                            ),
+                          );
+                        }
+                        return const SizedBox.shrink();
+                      },
+                    ),
+                  ),
+                ),
+                borderData: FlBorderData(show: false),
+                lineBarsData: [
+                  LineChartBarData(
+                    spots: List.generate(
+                      counts.length,
+                      (i) => FlSpot(i.toDouble(), counts[i]),
+                    ),
+                    isCurved: true,
+                    gradient: const LinearGradient(
+                      colors: [Color(0xFF2196F3), Color(0xFF00BCD4)],
+                    ),
+                    barWidth: 3,
+                    dotData: FlDotData(
+                      show: true,
+                      getDotPainter: (spot, percent, bar, index) =>
+                          FlDotCirclePainter(radius: 4, color: const Color(0xFF2196F3)),
+                    ),
+                    belowBarData: BarAreaData(
+                      show: true,
+                      gradient: LinearGradient(
+                        colors: [
+                          const Color(0xFF2196F3).withOpacity(0.15),
+                          const Color(0xFF2196F3).withOpacity(0),
+                        ],
+                      ),
+                    ),
+                  ),
+                ],
               ),
             ),
-          ],
-        ),
+          ),
+        ],
       ),
     );
   }
 
-  Widget _buildPieChart(int active, int total) {
+  Widget _buildPieChart(UserController controller) {
+    // Compute real KYC status breakdown
+    final verified = controller.users.where((u) => u.kycStatus.toUpperCase() == 'VERIFIED').length;
+    final pending = controller.users.where((u) => u.kycStatus.toUpperCase() == 'PENDING').length;
+    final rejected = controller.users.where((u) => u.kycStatus.toUpperCase() == 'REJECTED').length;
+    final unverified = controller.users.where((u) =>
+        u.kycStatus.toUpperCase() != 'VERIFIED' &&
+        u.kycStatus.toUpperCase() != 'PENDING' &&
+        u.kycStatus.toUpperCase() != 'REJECTED').length;
+    final total = controller.users.length;
+
+    final sections = <PieChartSectionData>[];
+    final legendItems = <Map<String, dynamic>>[];
+
+    if (verified > 0) {
+      sections.add(PieChartSectionData(
+        color: const Color(0xFF4CAF50),
+        value: verified.toDouble(),
+        radius: 35,
+        showTitle: false,
+      ));
+      legendItems.add({'label': 'Verified', 'count': verified, 'color': const Color(0xFF4CAF50)});
+    }
+    if (pending > 0) {
+      sections.add(PieChartSectionData(
+        color: const Color(0xFFFF9800),
+        value: pending.toDouble(),
+        radius: 35,
+        showTitle: false,
+      ));
+      legendItems.add({'label': 'Pending', 'count': pending, 'color': const Color(0xFFFF9800)});
+    }
+    if (rejected > 0) {
+      sections.add(PieChartSectionData(
+        color: const Color(0xFFF44336),
+        value: rejected.toDouble(),
+        radius: 35,
+        showTitle: false,
+      ));
+      legendItems.add({'label': 'Rejected', 'count': rejected, 'color': const Color(0xFFF44336)});
+    }
+    if (unverified > 0) {
+      sections.add(PieChartSectionData(
+        color: Colors.grey.shade300,
+        value: unverified.toDouble(),
+        radius: 35,
+        showTitle: false,
+      ));
+      legendItems.add({'label': 'Unverified', 'count': unverified, 'color': Colors.grey.shade300});
+    }
+
     return Container(
-      height: 160,
-      padding: const EdgeInsets.all(12),
+      height: 200,
+      padding: const EdgeInsets.all(14),
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(18),
       ),
-      child: PieChart(
-        PieChartData(
-          sections: [
-            PieChartSectionData(
-              color: const Color(0xFF4CAF50),
-              value: active.toDouble(),
-              radius: 35,
-              showTitle: false,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Icon(Icons.pie_chart_rounded, size: 16, color: AppColors.primary),
+              const SizedBox(width: 6),
+              Text(
+                'KYC Status Distribution',
+                style: TextStyle(
+                  fontSize: 13,
+                  fontWeight: FontWeight.w700,
+                  color: AppColors.textPrimary,
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 10),
+          Expanded(
+            child: Row(
+              children: [
+                Expanded(
+                  flex: 3,
+                  child: total > 0
+                      ? PieChart(
+                          PieChartData(
+                            sections: sections,
+                            centerSpaceRadius: 25,
+                            sectionsSpace: 2,
+                          ),
+                        )
+                      : Center(
+                          child: Text(
+                            'No data',
+                            style: TextStyle(fontSize: 12, color: AppColors.grey400),
+                          ),
+                        ),
+                ),
+                const SizedBox(width: 10),
+                Expanded(
+                  flex: 2,
+                  child: Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: legendItems.map((item) {
+                      return Padding(
+                        padding: const EdgeInsets.symmetric(vertical: 3),
+                        child: Row(
+                          children: [
+                            Container(
+                              width: 10,
+                              height: 10,
+                              decoration: BoxDecoration(
+                                color: item['color'] as Color,
+                                borderRadius: BorderRadius.circular(3),
+                              ),
+                            ),
+                            const SizedBox(width: 6),
+                            Expanded(
+                              child: Text(
+                                '${item['label']}',
+                                style: TextStyle(fontSize: 11, color: AppColors.grey700),
+                              ),
+                            ),
+                            Text(
+                              '${item['count']}',
+                              style: TextStyle(
+                                fontSize: 11,
+                                fontWeight: FontWeight.w700,
+                                color: AppColors.textPrimary,
+                              ),
+                            ),
+                          ],
+                        ),
+                      );
+                    }).toList(),
+                  ),
+                ),
+              ],
             ),
-            PieChartSectionData(
-              color: Colors.grey.shade100,
-              value: (total - active).toDouble(),
-              radius: 30,
-              showTitle: false,
-            ),
-          ],
-          centerSpaceRadius: 25,
-        ),
+          ),
+        ],
       ),
     );
   }
 
   Widget _buildBarChart(UserController controller) {
+    // Compute real transaction type breakdown
+    final allTx = controller.userTransactions.values.expand((txs) => txs).toList();
+    final typeCounts = <String, int>{};
+    for (final tx in allTx) {
+      final type = tx.type.isEmpty ? 'UNKNOWN' : tx.type;
+      typeCounts[type] = (typeCounts[type] ?? 0) + 1;
+    }
+
+    // Sort by count descending, take top 5
+    final sorted = typeCounts.entries.toList()
+      ..sort((a, b) => b.value.compareTo(a.value));
+    final top = sorted.take(5).toList();
+
+    final barColors = [
+      const Color(0xFF2196F3),
+      const Color(0xFF4CAF50),
+      const Color(0xFFFF9800),
+      const Color(0xFF9C27B0),
+      const Color(0xFFF44336),
+    ];
+
+    final maxY = top.isEmpty ? 5.0 : (top.first.value + 2).toDouble();
+
     return Container(
-      height: 160,
-      padding: const EdgeInsets.all(12),
+      height: 200,
+      padding: const EdgeInsets.all(14),
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(18),
       ),
-      child: BarChart(
-        BarChartData(
-          alignment: BarChartAlignment.spaceAround,
-          maxY: 10,
-          barGroups: [
-            BarChartGroupData(
-              x: 0,
-              barRods: [
-                BarChartRodData(
-                  toY: 7,
-                  color: const Color(0xFF4CAF50),
-                  width: 10,
-                  borderRadius: BorderRadius.circular(4),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Icon(Icons.bar_chart_rounded, size: 16, color: AppColors.primary),
+              const SizedBox(width: 6),
+              Text(
+                'Transaction Types',
+                style: TextStyle(
+                  fontSize: 13,
+                  fontWeight: FontWeight.w700,
+                  color: AppColors.textPrimary,
                 ),
-              ],
-            ),
-            BarChartGroupData(
-              x: 1,
-              barRods: [
-                BarChartRodData(
-                  toY: 4,
-                  color: Colors.orange,
-                  width: 10,
-                  borderRadius: BorderRadius.circular(4),
+              ),
+              const SizedBox(width: 6),
+              Text(
+                '(${allTx.length} total)',
+                style: TextStyle(
+                  fontSize: 11,
+                  color: AppColors.grey500,
                 ),
-              ],
-            ),
-            BarChartGroupData(
-              x: 2,
-              barRods: [
-                BarChartRodData(
-                  toY: 2,
-                  color: Colors.red,
-                  width: 10,
-                  borderRadius: BorderRadius.circular(4),
-                ),
-              ],
-            ),
-          ],
-          titlesData: FlTitlesData(show: false),
-          gridData: FlGridData(show: false),
-          borderData: FlBorderData(show: false),
-        ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 10),
+          Expanded(
+            child: top.isNotEmpty
+                ? BarChart(
+                    BarChartData(
+                      alignment: BarChartAlignment.spaceAround,
+                      maxY: maxY,
+                      barGroups: List.generate(top.length, (i) {
+                        return BarChartGroupData(
+                          x: i,
+                          barRods: [
+                            BarChartRodData(
+                              toY: top[i].value.toDouble(),
+                              color: barColors[i % barColors.length],
+                              width: 20,
+                              borderRadius: BorderRadius.circular(6),
+                            ),
+                          ],
+                        );
+                      }),
+                      titlesData: FlTitlesData(
+                        show: true,
+                        rightTitles: AxisTitles(sideTitles: SideTitles(showTitles: false)),
+                        topTitles: AxisTitles(sideTitles: SideTitles(showTitles: false)),
+                        leftTitles: AxisTitles(
+                          sideTitles: SideTitles(
+                            showTitles: true,
+                            reservedSize: 24,
+                            getTitlesWidget: (v, m) {
+                              if (v == v.roundToDouble()) {
+                                return Text(
+                                  v.toInt().toString(),
+                                  style: const TextStyle(color: Colors.grey, fontSize: 9),
+                                );
+                              }
+                              return const SizedBox.shrink();
+                            },
+                          ),
+                        ),
+                        bottomTitles: AxisTitles(
+                          sideTitles: SideTitles(
+                            showTitles: true,
+                            getTitlesWidget: (v, m) {
+                              final idx = v.toInt();
+                              if (idx >= 0 && idx < top.length) {
+                                final label = top[idx].key;
+                                // Shorten long type names
+                                final short = label
+                                    .replaceAll('SELL_TO_BANK', 'Sell')
+                                    .replaceAll('SELL_TO_VAULT', 'Vault')
+                                    .replaceAll('BUY_GOLD', 'Buy')
+                                    .replaceAll('TRANSFER', 'Transfer')
+                                    .replaceAll('_', ' ');
+                                return Padding(
+                                  padding: const EdgeInsets.only(top: 4),
+                                  child: Text(
+                                    short.length > 8 ? short.substring(0, 8) : short,
+                                    style: const TextStyle(color: Colors.grey, fontSize: 9),
+                                    textAlign: TextAlign.center,
+                                  ),
+                                );
+                              }
+                              return const SizedBox.shrink();
+                            },
+                          ),
+                        ),
+                      ),
+                      gridData: FlGridData(show: false),
+                      borderData: FlBorderData(show: false),
+                    ),
+                  )
+                : Center(
+                    child: Text(
+                      'No transactions yet',
+                      style: TextStyle(fontSize: 12, color: AppColors.grey400),
+                    ),
+                  ),
+          ),
+        ],
       ),
     );
   }
@@ -475,51 +735,94 @@ class _UsersScreenState extends State<UsersScreen> {
       builder: (context) => Dialog(
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
         child: Container(
-          width: 600,
-          height: 600,
-          padding: const EdgeInsets.all(24),
+          width: 960,
+          height: 680,
+          padding: const EdgeInsets.all(28),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
-                  Text(
-                    'All Users',
-                    style: TextStyle(
-                      fontSize: 20,
-                      fontWeight: FontWeight.bold,
-                      color: AppColors.textPrimary,
-                    ),
+                  Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        'All Users',
+                        style: TextStyle(
+                          fontSize: 22,
+                          fontWeight: FontWeight.bold,
+                          color: AppColors.textPrimary,
+                          letterSpacing: -0.5,
+                        ),
+                      ),
+                      const SizedBox(height: 2),
+                      Obx(() => Text(
+                        '${controller.filteredUsers.length} users found',
+                        style: TextStyle(fontSize: 13, color: AppColors.grey500),
+                      )),
+                    ],
                   ),
                   IconButton(
                     onPressed: () => Navigator.pop(context),
-                    icon: Icon(Icons.close),
+                    icon: Icon(Icons.close_rounded, color: AppColors.grey500),
                   ),
                 ],
               ),
               const SizedBox(height: 16),
               TextField(
                 decoration: InputDecoration(
-                  hintText: 'Search users...',
-                  prefixIcon: Icon(Icons.search),
+                  hintText: 'Search by name, email, phone...',
+                  hintStyle: TextStyle(fontSize: 13, color: AppColors.grey400),
+                  prefixIcon: Icon(Icons.search_rounded, size: 20, color: AppColors.grey500),
+                  filled: true,
+                  fillColor: AppColors.grey50,
+                  contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
                   border: OutlineInputBorder(
                     borderRadius: BorderRadius.circular(12),
+                    borderSide: BorderSide(color: AppColors.grey200),
+                  ),
+                  enabledBorder: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(12),
+                    borderSide: BorderSide(color: AppColors.grey200),
+                  ),
+                  focusedBorder: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(12),
+                    borderSide: BorderSide(color: AppColors.primary, width: 1.5),
                   ),
                 ),
+                style: TextStyle(fontSize: 13, color: AppColors.textPrimary),
                 onChanged: (value) => controller.setSearchQuery(value),
               ),
               const SizedBox(height: 16),
               Expanded(
                 child: Obx(
-                  () => ListView.separated(
-                    itemCount: controller.filteredUsers.length,
-                    separatorBuilder: (_, __) => const Divider(height: 1),
-                    itemBuilder: (context, index) {
-                      final user = controller.filteredUsers[index];
-                      return _buildUserDetailCard(user, controller);
-                    },
-                  ),
+                  () => controller.filteredUsers.isEmpty
+                      ? Center(
+                          child: Column(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Icon(Icons.people_outline, size: 48, color: AppColors.grey300),
+                              const SizedBox(height: 12),
+                              Text(
+                                'No users found',
+                                style: TextStyle(
+                                  fontSize: 15,
+                                  fontWeight: FontWeight.w500,
+                                  color: AppColors.grey500,
+                                ),
+                              ),
+                            ],
+                          ),
+                        )
+                      : ListView.separated(
+                          itemCount: controller.filteredUsers.length,
+                          separatorBuilder: (_, __) => const SizedBox(height: 6),
+                          itemBuilder: (context, index) {
+                            final user = controller.filteredUsers[index];
+                            return _buildUserDetailCard(user, controller);
+                          },
+                        ),
                 ),
               ),
             ],
@@ -547,123 +850,210 @@ class _UsersScreenState extends State<UsersScreen> {
           BoxShadow(color: Colors.black.withOpacity(0.02), blurRadius: 10),
         ],
       ),
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          _buildUserAvatar(user, radius: compact ? 24 : 30),
-          const SizedBox(width: 14),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Row(
-                  children: [
-                    Expanded(
-                      child: Text(
-                        user.displayName,
-                        style: const TextStyle(
-                          fontWeight: FontWeight.bold,
-                          fontSize: 14,
+      child: IntrinsicHeight(
+        child: Row(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            // ── 40% User Info ─────────────────────────────────────
+            Expanded(
+              flex: 40,
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  // Header: avatar + name + role
+                  Row(
+                    children: [
+                      _buildUserAvatar(user, radius: compact ? 22 : 26),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Row(
+                              children: [
+                                Expanded(
+                                  child: Text(
+                                    user.displayName,
+                                    style: const TextStyle(
+                                      fontWeight: FontWeight.bold,
+                                      fontSize: 14,
+                                    ),
+                                    overflow: TextOverflow.ellipsis,
+                                  ),
+                                ),
+                                _statusChip(user.isAdmin ? 'Admin' : user.role),
+                              ],
+                            ),
+                            const SizedBox(height: 2),
+                            if (user.email != null)
+                              Text(
+                                user.email!,
+                                style: TextStyle(fontSize: 11, color: AppColors.grey500),
+                                overflow: TextOverflow.ellipsis,
+                              ),
+                          ],
                         ),
-                        overflow: TextOverflow.ellipsis,
                       ),
+                    ],
+                  ),
+                  const SizedBox(height: 10),
+
+                  // Info groups inside a light box
+                  Container(
+                    padding: const EdgeInsets.all(10),
+                    decoration: BoxDecoration(
+                      color: AppColors.grey50,
+                      borderRadius: BorderRadius.circular(12),
+                      border: Border.all(color: AppColors.grey100),
                     ),
-                    _statusChip(user.isAdmin ? 'Admin' : user.role),
+                    child: Column(
+                      children: [
+                        // Contact & Security row
+                        _infoGroupRow(
+                          children: [
+                            _infoItem(Icons.phone_outlined, 'Phone', user.phoneNumber ?? '—'),
+                            _infoItem(Icons.badge_outlined, 'NID', user.nationalId ?? '—'),
+                          ],
+                        ),
+                        const SizedBox(height: 8),
+                        _infoGroupRow(
+                          children: [
+                            _infoItem(Icons.account_balance_outlined, 'Bank', user.bankName ?? '—'),
+                            _infoItem(Icons.credit_card_outlined, 'Account', user.accountNumber ?? '—'),
+                          ],
+                        ),
+                        const SizedBox(height: 8),
+                        _infoGroupRow(
+                          children: [
+                            _infoItem(Icons.savings_outlined, 'Wallet', Formatters.formatGrams(user.totalGrams ?? 0)),
+                            _infoItem(Icons.lock_outline, 'Locked', Formatters.formatGrams(user.lockedGrams ?? 0)),
+                            _infoItem(Icons.account_balance_wallet_outlined, 'Available', Formatters.formatGrams(user.availableGrams ?? 0)),
+                          ],
+                        ),
+                        const SizedBox(height: 8),
+                        _infoGroupRow(
+                          children: [
+                            _infoItem(Icons.receipt_long_outlined, 'Transactions', '${userTxs.length} • ${Formatters.formatGrams(txGrams)}'),
+                            _infoItem(Icons.calendar_today_outlined, 'Created', Formatters.formatDate(user.createdAt)),
+                          ],
+                        ),
+                        // Security flags row
+                        const SizedBox(height: 8),
+                        Row(
+                          children: [
+                            _securityBadge(Icons.fingerprint, 'Fingerprint', user.hasFingerprint),
+                            const SizedBox(width: 6),
+                            _securityBadge(Icons.pin_outlined, 'Passcode', user.hasPasscode),
+                            const SizedBox(width: 6),
+                            _securityBadge(Icons.verified_user_outlined, 'OTP', user.otpVerified),
+                            if (user.lastLogin != null) ...[
+                              const SizedBox(width: 6),
+                              _securityBadge(Icons.login_outlined, 'Last login', null),
+                            ],
+                          ],
+                        ),
+                      ],
+                    ),
+                  ),
+
+                  if (!compact) ...[
+                    const SizedBox(height: 8),
+                    _idLine('UID', user.id),
+                    if (user.backendId != null)
+                      _idLine('Backend ID', user.backendId!),
                   ],
-                ),
-                const SizedBox(height: 8),
-                Wrap(
-                  spacing: 8,
-                  runSpacing: 6,
-                  children: [
-                    _detailChip(Icons.email_outlined, user.email ?? 'No email'),
-                    _detailChip(
-                      Icons.phone_outlined,
-                      user.phoneNumber ?? 'No phone',
-                    ),
-                    _detailChip(
-                      Icons.fingerprint,
-                      'Fingerprint: ${_yesNo(user.hasFingerprint)}',
-                    ),
-                    _detailChip(
-                      Icons.pin_outlined,
-                      'Passcode: ${_yesNo(user.hasPasscode)}',
-                    ),
-                    _detailChip(
-                      Icons.verified_user_outlined,
-                      'OTP: ${_yesNo(user.otpVerified)}',
-                    ),
-                    _buildKycStatusChip(user),
-                    _detailChip(
-                      Icons.account_balance_outlined,
-                      user.bankName ?? 'No bank',
-                    ),
-                    _detailChip(
-                      Icons.credit_card_outlined,
-                      user.accountNumber ?? 'No account',
-                    ),
-                    _detailChip(
-                      Icons.badge_outlined,
-                      user.nationalId ?? 'No NID',
-                    ),
-                    _detailChip(
-                      Icons.savings_outlined,
-                      'Wallet: ${Formatters.formatGrams(user.totalGrams ?? 0)}',
-                    ),
-                    _detailChip(
-                      Icons.lock_outline,
-                      'Locked: ${Formatters.formatGrams(user.lockedGrams ?? 0)}',
-                    ),
-                    _detailChip(
-                      Icons.account_balance_wallet_outlined,
-                      'Available: ${Formatters.formatGrams(user.availableGrams ?? 0)}',
-                    ),
-                    _detailChip(
-                      Icons.receipt_long_outlined,
-                      '${userTxs.length} txs • ${Formatters.formatGrams(txGrams)}',
-                    ),
-                    _detailChip(
-                      Icons.calendar_today_outlined,
-                      'Created: ${Formatters.formatDate(user.createdAt)}',
-                    ),
-                    if (user.lastLogin != null)
-                      _detailChip(
-                        Icons.login_outlined,
-                        'Last login: ${Formatters.formatDateTime(user.lastLogin!)}',
-                      ),
-                  ],
-                ),
-                if (!compact) ...[
-                  const SizedBox(height: 8),
-                  _idLine('UID', user.id),
-                  if (user.backendId != null)
-                    _idLine('Backend ID', user.backendId!),
-                  if (user.nidFrontUrl != null)
-                    _idLine('NID Front', user.nidFrontUrl!),
-                  if (user.nidBackUrl != null)
-                    _idLine('NID Back', user.nidBackUrl!),
                 ],
-              ],
+              ),
             ),
-          ),
-        ],
+
+            // ── 20% NID Front ─────────────────────────────────────
+            Expanded(
+              flex: 20,
+              child: _buildNidImageColumn(
+                label: 'NID Front',
+                url: user.nidFrontUrl,
+              ),
+            ),
+
+            // ── 20% NID Back ──────────────────────────────────────
+            Expanded(
+              flex: 20,
+              child: _buildNidImageColumn(
+                label: 'NID Back',
+                url: user.nidBackUrl,
+              ),
+            ),
+
+            // ── 20% KYC Column ────────────────────────────────────
+            Expanded(
+              flex: 20,
+              child: _buildKycColumn(user),
+            ),
+          ],
+        ),
       ),
     );
   }
 
-  Widget _detailChip(IconData icon, String text) {
+  Widget _infoGroupRow({required List<Widget> children}) {
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        for (int i = 0; i < children.length; i++) ...[
+          if (i > 0) const SizedBox(width: 8),
+          Expanded(child: children[i]),
+        ],
+      ],
+    );
+  }
+
+  Widget _infoItem(IconData icon, String label, String value) {
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Icon(icon, size: 12, color: AppColors.primary),
+        const SizedBox(width: 4),
+        Expanded(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                label,
+                style: TextStyle(fontSize: 9, color: AppColors.grey500, fontWeight: FontWeight.w500),
+              ),
+              Text(
+                value,
+                style: TextStyle(fontSize: 11, color: AppColors.textPrimary, fontWeight: FontWeight.w600),
+                overflow: TextOverflow.ellipsis,
+                maxLines: 1,
+              ),
+            ],
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _securityBadge(IconData icon, String label, bool? value) {
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 5),
+      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 3),
       decoration: BoxDecoration(
-        color: AppColors.grey100,
-        borderRadius: BorderRadius.circular(20),
+        color: (value == true ? AppColors.success : AppColors.grey100).withOpacity(0.15),
+        borderRadius: BorderRadius.circular(6),
       ),
       child: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
-          Icon(icon, size: 12, color: AppColors.grey600),
-          const SizedBox(width: 4),
-          Text(text, style: TextStyle(fontSize: 11, color: AppColors.grey700)),
+          Icon(icon, size: 10, color: value == true ? AppColors.success : AppColors.grey500),
+          const SizedBox(width: 3),
+          Text(
+            label,
+            style: TextStyle(
+              fontSize: 9,
+              fontWeight: FontWeight.w600,
+              color: value == true ? AppColors.success : AppColors.grey500,
+            ),
+          ),
         ],
       ),
     );
@@ -702,10 +1092,155 @@ class _UsersScreenState extends State<UsersScreen> {
     );
   }
 
-  String _yesNo(bool? value) =>
-      value == null ? 'Unknown' : (value ? 'Yes' : 'No');
+  Widget _buildNidImageColumn({required String label, required String? url}) {
+    return Container(
+      margin: const EdgeInsets.symmetric(horizontal: 4),
+      padding: const EdgeInsets.all(6),
+      decoration: BoxDecoration(
+        color: AppColors.grey100,
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: AppColors.grey200),
+      ),
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          Text(
+            label,
+            style: TextStyle(
+              fontSize: 10,
+              fontWeight: FontWeight.w600,
+              color: AppColors.grey600,
+            ),
+          ),
+          const SizedBox(height: 6),
+          Expanded(
+            child: url != null && url.trim().isNotEmpty && !url.toLowerCase().contains('null')
+                ? GestureDetector(
+                    onTap: () => _showZoomedImage(context, url, label),
+                    child: ClipRRect(
+                      borderRadius: BorderRadius.circular(8),
+                      child: Image.network(
+                        url,
+                        fit: BoxFit.cover,
+                        width: double.infinity,
+                        webHtmlElementStrategy: WebHtmlElementStrategy.prefer,
+                        loadingBuilder: (context, child, loadingProgress) {
+                          if (loadingProgress == null) return child;
+                          return Center(
+                            child: SizedBox(
+                              width: 20,
+                              height: 20,
+                              child: CircularProgressIndicator(
+                                strokeWidth: 2,
+                                value: loadingProgress.expectedTotalBytes == null
+                                    ? null
+                                    : loadingProgress.cumulativeBytesLoaded /
+                                          loadingProgress.expectedTotalBytes!,
+                              ),
+                            ),
+                          );
+                        },
+                        errorBuilder: (_, __, ___) => Container(
+                          color: AppColors.grey200,
+                          child: Icon(
+                            Icons.broken_image_outlined,
+                            color: AppColors.grey400,
+                            size: 28,
+                          ),
+                        ),
+                      ),
+                    ),
+                  )
+                : Container(
+                    width: double.infinity,
+                    decoration: BoxDecoration(
+                      color: AppColors.grey200,
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                    child: Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Icon(
+                          Icons.image_outlined,
+                          color: AppColors.grey400,
+                          size: 28,
+                        ),
+                        const SizedBox(height: 4),
+                        Text(
+                          'No image',
+                          style: TextStyle(
+                            fontSize: 9,
+                            color: AppColors.grey400,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+          ),
+        ],
+      ),
+    );
+  }
 
-  Widget _buildKycStatusChip(User user) {
+  void _showZoomedImage(BuildContext context, String imageUrl, String title) {
+    showDialog(
+      context: context,
+      builder: (context) => Dialog(
+        backgroundColor: Colors.black87,
+        insetPadding: const EdgeInsets.all(24),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        child: Stack(
+          children: [
+            Center(
+              child: InteractiveViewer(
+                minScale: 0.5,
+                maxScale: 4.0,
+                child: Image.network(
+                  imageUrl,
+                  fit: BoxFit.contain,
+                  webHtmlElementStrategy: WebHtmlElementStrategy.prefer,
+                  errorBuilder: (_, __, ___) => const Padding(
+                    padding: EdgeInsets.all(32),
+                    child: Icon(Icons.broken_image, color: Colors.white54, size: 64),
+                  ),
+                ),
+              ),
+            ),
+            Positioned(
+              top: 12,
+              right: 12,
+              child: Row(
+                children: [
+                  Text(
+                    title,
+                    style: const TextStyle(
+                      color: Colors.white70,
+                      fontSize: 14,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                  const SizedBox(width: 12),
+                  GestureDetector(
+                    onTap: () => Navigator.pop(context),
+                    child: Container(
+                      padding: const EdgeInsets.all(6),
+                      decoration: BoxDecoration(
+                        color: Colors.white24,
+                        shape: BoxShape.circle,
+                      ),
+                      child: const Icon(Icons.close, color: Colors.white, size: 18),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildKycColumn(User user) {
     final status = user.kycStatus.toUpperCase();
     Color color;
     switch (status) {
@@ -722,46 +1257,66 @@ class _UsersScreenState extends State<UsersScreen> {
         color = AppColors.grey500;
     }
 
-    return PopupMenuButton<String>(
-      onSelected: (newStatus) => _updateKycStatus(user.id, newStatus),
-      child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 5),
-        decoration: BoxDecoration(
-          color: color.withOpacity(0.1),
-          borderRadius: BorderRadius.circular(20),
-          border: Border.all(color: color.withOpacity(0.3)),
-        ),
-        child: Row(
-          mainAxisSize: MainAxisSize.min,
+    return Container(
+      margin: const EdgeInsets.only(left: 8),
+      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 10),
+      decoration: BoxDecoration(
+        color: color.withOpacity(0.06),
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: color.withOpacity(0.2)),
+      ),
+      child: PopupMenuButton<String>(
+        onSelected: (newStatus) => _updateKycStatus(user.id, newStatus),
+        offset: const Offset(-20, 0),
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Icon(Icons.verified_user_outlined, size: 12, color: color),
-            const SizedBox(width: 4),
+            Icon(Icons.shield_rounded, size: 20, color: color),
+            const SizedBox(height: 6),
             Text(
-              'KYC: $status',
+              'KYC',
               style: TextStyle(
-                fontSize: 11,
-                fontWeight: FontWeight.w600,
-                color: color,
+                fontSize: 10,
+                fontWeight: FontWeight.w700,
+                color: color.withOpacity(0.7),
+                letterSpacing: 0.5,
               ),
             ),
-            const SizedBox(width: 2),
-            Icon(Icons.arrow_drop_down, size: 14, color: color),
+            const SizedBox(height: 4),
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 3),
+              decoration: BoxDecoration(
+                color: color.withOpacity(0.15),
+                borderRadius: BorderRadius.circular(8),
+              ),
+              child: Text(
+                status,
+                style: TextStyle(
+                  fontSize: 9,
+                  fontWeight: FontWeight.w700,
+                  color: color,
+                ),
+                textAlign: TextAlign.center,
+              ),
+            ),
+            const SizedBox(height: 6),
+            Icon(Icons.arrow_drop_down, size: 16, color: color),
           ],
         ),
+        itemBuilder: (context) => [
+          const PopupMenuItem(value: 'PENDING', child: Text('Pending')),
+          const PopupMenuItem(value: 'VERIFIED', child: Text('Verified')),
+          const PopupMenuItem(value: 'REJECTED', child: Text('Rejected')),
+          const PopupMenuItem(value: 'UNVERIFIED', child: Text('Unverified')),
+        ],
       ),
-      itemBuilder: (context) => [
-        const PopupMenuItem(value: 'PENDING', child: Text('Pending')),
-        const PopupMenuItem(value: 'VERIFIED', child: Text('Verified')),
-        const PopupMenuItem(value: 'REJECTED', child: Text('Rejected')),
-        const PopupMenuItem(value: 'UNVERIFIED', child: Text('Unverified')),
-      ],
     );
   }
 
   Future<void> _updateKycStatus(String userId, String status) async {
     try {
       final fs = FirebaseFirestore.instance;
-      final docRef = fs.collection('users').document(userId);
+      final docRef = fs.collection('users').doc(userId);
       final doc = await docRef.get();
 
       if (!doc.exists) {
@@ -775,15 +1330,15 @@ class _UsersScreenState extends State<UsersScreen> {
         'kycVerifiedAt': FieldValue.serverTimestamp(),
       });
 
+      final controller = Get.find<UserController>();
+      controller.updateKycStatus(userId, status);
+
       Get.snackbar(
         'KYC Updated',
         'KYC status updated to $status',
         backgroundColor: AppColors.success,
         colorText: Colors.white,
       );
-      // Refresh user data
-      final controller = Get.find<UserController>();
-      controller.refresh();
     } catch (e) {
       Get.snackbar(
         'Error',

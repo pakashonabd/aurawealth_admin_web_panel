@@ -7,26 +7,27 @@ import '../../services/api_service.dart';
 import '../../core/constants/app_colors.dart';
 
 class RedemptionScreen extends StatefulWidget {
-  const RedemptionScreen({Key? key}) : super(key: key);
+  const RedemptionScreen({super.key});
 
   @override
   State<RedemptionScreen> createState() => _RedemptionScreenState();
 }
 
 class _RedemptionScreenState extends State<RedemptionScreen>
-    with SingleTickerProviderStateMixin {
+    with TickerProviderStateMixin {
   final ApiService _api = ApiService();
   List<Redemption> _redemptions = [];
   bool _isLoading = true;
   String? _error;
   String? _searchQuery;
   Timer? _pollTimer;
-  late TabController _tabController;
+
+  late TabController _deliveryTabController;
 
   @override
   void initState() {
     super.initState();
-    _tabController = TabController(length: 2, vsync: this);
+    _deliveryTabController = TabController(length: 2, vsync: this);
     _loadRedemptions();
     _startPolling();
   }
@@ -34,7 +35,7 @@ class _RedemptionScreenState extends State<RedemptionScreen>
   @override
   void dispose() {
     _pollTimer?.cancel();
-    _tabController.dispose();
+    _deliveryTabController.dispose();
     super.dispose();
   }
 
@@ -45,15 +46,14 @@ class _RedemptionScreenState extends State<RedemptionScreen>
   }
 
   Future<void> _loadRedemptions({bool silent = false}) async {
-    if (!silent) setState(() {
-      _isLoading = true;
-      _error = null;
-    });
+    if (!silent && mounted) {
+      setState(() {
+        _isLoading = true;
+        _error = null;
+      });
+    }
     try {
-      final res = await _api.getRedemptions(
-        search: _searchQuery,
-        limit: 500,
-      );
+      final res = await _api.getRedemptions(search: _searchQuery, limit: 500);
       final list = (res['redemptions'] as List<dynamic>? ?? [])
           .map((j) => Redemption.fromJson(j as Map<String, dynamic>))
           .toList();
@@ -79,42 +79,50 @@ class _RedemptionScreenState extends State<RedemptionScreen>
     }
   }
 
-  List<Redemption> get _pendingRedemptions =>
-      _redemptions.where((r) => r.approvalStatus.toUpperCase() == 'PENDING').toList();
+  // ── Computed lists ──────────────────────────────────────────────────────
 
-  List<Redemption> get _approvedRedemptions =>
-      _redemptions.where((r) =>
-          r.approvalStatus.toUpperCase() == 'APPROVED' ||
-          (r.deliveryStatus != null &&
-              r.deliveryStatus!.toUpperCase() != 'DELIVERED' &&
-              r.deliveryStatus!.toUpperCase() != 'PICKED_UP')).toList();
+  List<Redemption> get _pendingRedemptions => _redemptions
+      .where((r) => r.approvalStatus.toUpperCase() == 'PENDING')
+      .toList();
 
-  Color _statusColor(String status) {
-    switch (status.toUpperCase()) {
-      case 'PENDING':
-        return AppColors.statusPending;
-      case 'APPROVED':
-        return AppColors.statusApproved;
-      case 'REJECTED':
-        return AppColors.error;
-      default:
-        return AppColors.grey500;
-    }
-  }
+  int get _approvedCount => _redemptions
+      .where((r) => r.approvalStatus.toUpperCase() == 'APPROVED')
+      .length;
+
+  List<Redemption> get _homeDeliveryRedemptions => _redemptions.where((r) {
+    if (r.approvalStatus.toUpperCase() != 'APPROVED') return false;
+    final ds = (r.deliveryStatus ?? '').toUpperCase();
+    if (ds == 'DELIVERED' || ds == 'PICKED_UP') return false;
+    final method = r.deliveryMethod.toUpperCase();
+    return method == 'DELIVERY' || method == 'HOME_DELIVERY';
+  }).toList();
+
+  List<Redemption> get _storePickupRedemptions => _redemptions.where((r) {
+    if (r.approvalStatus.toUpperCase() != 'APPROVED') return false;
+    final ds = (r.deliveryStatus ?? '').toUpperCase();
+    if (ds == 'DELIVERED' || ds == 'PICKED_UP') return false;
+    return r.deliveryMethod.toUpperCase() == 'STORE_PICKUP';
+  }).toList();
+
+  int get _homeDeliveryCount => _homeDeliveryRedemptions.length;
+  int get _storePickupCount => _storePickupRedemptions.length;
+
+  // ── Helpers ─────────────────────────────────────────────────────────────
 
   IconData _deliveryIcon(String? method) {
-    if (method == 'home_delivery' || method == 'delivery') return Icons.local_shipping_rounded;
-    if (method == 'store_pickup') return Icons.store_rounded;
+    final m = (method ?? '').toUpperCase();
+    if (m == 'DELIVERY' || m == 'HOME_DELIVERY') {
+      return Icons.local_shipping_rounded;
+    }
+    if (m == 'STORE_PICKUP') return Icons.store_rounded;
     return Icons.help_outline_rounded;
   }
 
   String _deliveryStatusLabel(String? status) {
-    if (status == null) return '';
+    if (status == null) return 'Pending';
     switch (status.toUpperCase()) {
       case 'PENDING':
         return 'Pending';
-      case 'APPROVED':
-        return 'Approved';
       case 'READY_TO_SHIP':
         return 'Ready to Ship';
       case 'ON_THE_WAY':
@@ -137,14 +145,14 @@ class _RedemptionScreenState extends State<RedemptionScreen>
     switch (status.toUpperCase()) {
       case 'PENDING':
         return AppColors.statusPending;
-      case 'APPROVED':
-        return AppColors.statusApproved;
       case 'READY_TO_SHIP':
-      case 'READY_FOR_PICKUP':
         return AppColors.info;
       case 'ON_THE_WAY':
-      case 'SHIPPED':
         return Colors.orange;
+      case 'SHIPPED':
+        return const Color(0xFF7C4DFF);
+      case 'READY_FOR_PICKUP':
+        return AppColors.info;
       case 'DELIVERED':
       case 'PICKED_UP':
         return AppColors.success;
@@ -152,6 +160,23 @@ class _RedemptionScreenState extends State<RedemptionScreen>
         return AppColors.grey500;
     }
   }
+
+  /// All statuses for the dropdown. Only future statuses are selectable.
+  List<String> _allStatusesForDeliveryType(String deliveryMethod) {
+    final m = deliveryMethod.toUpperCase();
+    if (m == 'STORE_PICKUP') {
+      return ['READY_FOR_PICKUP', 'PICKED_UP'];
+    }
+    // Home delivery (default)
+    return ['READY_TO_SHIP', 'ON_THE_WAY', 'SHIPPED', 'DELIVERED'];
+  }
+
+  int _statusIndex(String status, String deliveryMethod) {
+    final all = _allStatusesForDeliveryType(deliveryMethod);
+    return all.indexOf(status.toUpperCase());
+  }
+
+  // ── Actions ─────────────────────────────────────────────────────────────
 
   Future<void> _approve(String txId) async {
     try {
@@ -170,10 +195,14 @@ class _RedemptionScreenState extends State<RedemptionScreen>
     final confirmed = await showDialog<bool>(
       context: context,
       builder: (ctx) => AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
         title: const Text('Reject Redemption'),
         content: TextField(
           controller: noteCtrl,
-          decoration: const InputDecoration(hintText: 'Reason (required)'),
+          decoration: InputDecoration(
+            hintText: 'Reason (required)',
+            border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
+          ),
           maxLines: 2,
         ),
         actions: [
@@ -189,7 +218,8 @@ class _RedemptionScreenState extends State<RedemptionScreen>
               }
               Navigator.pop(ctx, true);
             },
-            child: const Text('Reject', style: TextStyle(color: AppColors.error)),
+            child:
+                const Text('Reject', style: TextStyle(color: AppColors.error)),
           ),
         ],
       ),
@@ -209,7 +239,7 @@ class _RedemptionScreenState extends State<RedemptionScreen>
   Future<void> _updateDelivery(String txId, String status) async {
     try {
       await _api.updateDeliveryStatus(txId, status);
-      Get.snackbar('Updated', 'Delivery status updated',
+      Get.snackbar('Updated', 'Status updated to ${_deliveryStatusLabel(status)}',
           backgroundColor: AppColors.success, colorText: Colors.white);
       _loadRedemptions(silent: true);
     } catch (e) {
@@ -218,25 +248,86 @@ class _RedemptionScreenState extends State<RedemptionScreen>
     }
   }
 
-  void _showDeliveryStatusDialog(String txId, String currentStatus) {
-    final statuses = _getAvailableDeliveryStatuses(currentStatus);
+  void _showUpdateStatusDialog(Redemption r) {
+    final allStatuses = _allStatusesForDeliveryType(r.deliveryMethod);
+    final currentIdx = _statusIndex(r.deliveryStatus ?? 'PENDING', r.deliveryMethod);
+
     showDialog(
       context: context,
       builder: (ctx) => AlertDialog(
-        title: const Text('Update Delivery Status'),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        title: const Text('Update Status'),
         content: Column(
           mainAxisSize: MainAxisSize.min,
-          children: statuses.map((s) => ListTile(
-            title: Text(_deliveryStatusLabel(s)),
-            leading: Icon(
-              Icons.radio_button_checked,
-              color: s == currentStatus ? AppColors.primary : AppColors.grey300,
-            ),
-            onTap: () {
-              Navigator.pop(ctx);
-              _updateDelivery(txId, s);
-            },
-          )).toList(),
+          children: allStatuses.map((s) {
+            final sIdx = allStatuses.indexOf(s);
+            final isDone = sIdx < currentIdx;
+            final isCurrent = sIdx == currentIdx;
+            final isFuture = sIdx > currentIdx;
+            final color = _deliveryStatusColor(s);
+
+            return ListTile(
+              contentPadding: EdgeInsets.zero,
+              enabled: isFuture,
+              leading: Container(
+                padding: const EdgeInsets.all(8),
+                decoration: BoxDecoration(
+                  color: isDone
+                      ? AppColors.success.withOpacity(0.1)
+                      : isCurrent
+                          ? color.withOpacity(0.1)
+                          : AppColors.grey100,
+                  borderRadius: BorderRadius.circular(10),
+                ),
+                child: Icon(
+                  isDone
+                      ? Icons.check_circle_rounded
+                      : isCurrent
+                          ? Icons.radio_button_checked
+                          : Icons.circle_outlined,
+                  color: isDone
+                      ? AppColors.success
+                      : isCurrent
+                          ? color
+                          : AppColors.grey400,
+                  size: 20,
+                ),
+              ),
+              title: Text(
+                _deliveryStatusLabel(s),
+                style: TextStyle(
+                  fontSize: 14,
+                  fontWeight: isCurrent ? FontWeight.w600 : FontWeight.w400,
+                  color: isFuture
+                      ? AppColors.textPrimary
+                      : isDone
+                          ? AppColors.success
+                          : AppColors.grey500,
+                ),
+              ),
+              subtitle: Text(
+                isDone
+                    ? 'Completed'
+                    : isCurrent
+                        ? 'Current'
+                        : 'Set to "${_deliveryStatusLabel(s)}"',
+                style: TextStyle(
+                  fontSize: 11,
+                  color: isDone
+                      ? AppColors.success
+                      : isCurrent
+                          ? color
+                          : AppColors.grey500,
+                ),
+              ),
+              onTap: isFuture
+                  ? () {
+                      Navigator.pop(ctx);
+                      _updateDelivery(r.txId, s);
+                    }
+                  : null,
+            );
+          }).toList(),
         ),
         actions: [
           TextButton(
@@ -248,45 +339,24 @@ class _RedemptionScreenState extends State<RedemptionScreen>
     );
   }
 
-  List<String> _getAvailableDeliveryStatuses(String current) {
-    switch (current.toUpperCase()) {
-      case 'PENDING':
-        return ['PENDING', 'APPROVED'];
-      case 'APPROVED':
-        return ['APPROVED', 'READY_TO_SHIP', 'READY_FOR_PICKUP'];
-      case 'READY_TO_SHIP':
-        return ['READY_TO_SHIP', 'ON_THE_WAY'];
-      case 'ON_THE_WAY':
-        return ['ON_THE_WAY', 'SHIPPED', 'DELIVERED'];
-      case 'SHIPPED':
-        return ['SHIPPED', 'DELIVERED'];
-      case 'READY_FOR_PICKUP':
-        return ['READY_FOR_PICKUP', 'PICKED_UP'];
-      case 'DELIVERED':
-      case 'PICKED_UP':
-        return [current];
-      default:
-        return [current];
-    }
-  }
+  // ── Build ───────────────────────────────────────────────────────────────
 
   @override
   Widget build(BuildContext context) {
-    final pendingCount = _pendingRedemptions.length;
-    final deliveryCount = _approvedRedemptions.length;
-
     return Padding(
       padding: const EdgeInsets.all(16),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           _buildHeader(),
-          const SizedBox(height: 12),
-          _buildTabBar(pendingCount, deliveryCount),
-          const SizedBox(height: 12),
-          _buildSearchBar(),
-          const SizedBox(height: 12),
-          Expanded(child: _buildBody()),
+          const SizedBox(height: 16),
+          Expanded(
+            child: _isLoading
+                ? const Center(child: CircularProgressIndicator())
+                : _error != null
+                    ? _buildErrorState()
+                    : _buildSplitLayout(),
+          ),
         ],
       ),
     );
@@ -294,7 +364,6 @@ class _RedemptionScreenState extends State<RedemptionScreen>
 
   Widget _buildHeader() {
     final pending = _pendingRedemptions.length;
-    final approved = _redemptions.where((r) => r.approvalStatus == 'APPROVED').length;
     final totalGold = _redemptions.fold(0.0, (s, r) => s + r.goldAmount);
 
     return Row(
@@ -303,16 +372,42 @@ class _RedemptionScreenState extends State<RedemptionScreen>
         const SizedBox(width: 8),
         _statChip('Pending', '$pending', AppColors.statusPending),
         const SizedBox(width: 8),
-        _statChip('Approved', '$approved', AppColors.statusApproved),
+        _statChip('Approved', '$_approvedCount', AppColors.statusApproved),
+        const SizedBox(width: 8),
+        _statChip('Delivery', '$_homeDeliveryCount', const Color(0xFF2196F3)),
+        const SizedBox(width: 8),
+        _statChip('Pickup', '$_storePickupCount', const Color(0xFF673AB7)),
         const SizedBox(width: 8),
         _statChip('Gold', '${totalGold.toStringAsFixed(1)}g', Colors.amber),
+        const Spacer(),
+        _buildSearchBar(),
       ],
+    );
+  }
+
+  Widget _buildSearchBar() {
+    return SizedBox(
+      width: 220,
+      child: TextField(
+        decoration: InputDecoration(
+          hintText: 'Search name or phone...',
+          prefixIcon: const Icon(Icons.search, size: 18),
+          border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
+          contentPadding:
+              const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+          isDense: true,
+        ),
+        onSubmitted: (v) {
+          _searchQuery = v.isEmpty ? null : v;
+          _loadRedemptions();
+        },
+      ),
     );
   }
 
   Widget _statChip(String label, String value, Color color) {
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
       decoration: BoxDecoration(
         color: color.withOpacity(0.08),
         borderRadius: BorderRadius.circular(20),
@@ -322,52 +417,139 @@ class _RedemptionScreenState extends State<RedemptionScreen>
         mainAxisSize: MainAxisSize.min,
         children: [
           Container(
-              width: 8,
-              height: 8,
+              width: 7,
+              height: 7,
               decoration: BoxDecoration(color: color, shape: BoxShape.circle)),
-          const SizedBox(width: 8),
+          const SizedBox(width: 6),
           Text(label,
-              style: TextStyle(
-                  fontSize: 12, color: color, fontWeight: FontWeight.w500)),
+              style:
+                  TextStyle(fontSize: 11, color: color, fontWeight: FontWeight.w500)),
           const SizedBox(width: 4),
           Text(value,
-              style: TextStyle(
-                  fontSize: 13, color: color, fontWeight: FontWeight.w700)),
+              style:
+                  TextStyle(fontSize: 12, color: color, fontWeight: FontWeight.w700)),
         ],
       ),
     );
   }
 
-  Widget _buildTabBar(int pendingCount, int deliveryCount) {
+  // ── Split Layout: Left (Pending) | Right (Delivery tabs) ───────────────
+
+  Widget _buildSplitLayout() {
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        // ── Left Half: Pending Approvals ─────────────────────
+        Expanded(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              _sectionHeader(
+                'Pending Approvals',
+                _pendingRedemptions.length,
+                AppColors.statusPending,
+              ),
+              const SizedBox(height: 10),
+              Expanded(child: _buildPendingList()),
+            ],
+          ),
+        ),
+
+        // ── Divider ──────────────────────────────────────────
+        Container(
+          width: 1,
+          margin: const EdgeInsets.symmetric(horizontal: 16),
+          color: AppColors.grey200,
+        ),
+
+        // ── Right Half: Delivery Management ──────────────────
+        Expanded(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              _buildDeliveryTabs(),
+              const SizedBox(height: 10),
+              Expanded(
+                child: TabBarView(
+                  controller: _deliveryTabController,
+                  children: [
+                    _buildDeliveryList(
+                      _homeDeliveryRedemptions,
+                      'No home deliveries in progress',
+                      Icons.local_shipping_outlined,
+                    ),
+                    _buildDeliveryList(
+                      _storePickupRedemptions,
+                      'No store pickups in progress',
+                      Icons.store_outlined,
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _sectionHeader(String title, int count, Color color) {
+    return Row(
+      children: [
+        Text(title,
+            style: TextStyle(
+                fontSize: 15,
+                fontWeight: FontWeight.w700,
+                color: AppColors.textPrimary)),
+        const SizedBox(width: 8),
+        Container(
+          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+          decoration: BoxDecoration(
+            color: color.withOpacity(0.12),
+            borderRadius: BorderRadius.circular(10),
+          ),
+          child: Text('$count',
+              style: TextStyle(
+                  fontSize: 12, fontWeight: FontWeight.w700, color: color)),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildDeliveryTabs() {
     return Container(
       decoration: BoxDecoration(
-        color: AppColors.grey100,
+        color: Colors.transparent,
         borderRadius: BorderRadius.circular(10),
+        border: Border.all(color: AppColors.grey200),
       ),
       child: TabBar(
-        controller: _tabController,
+        controller: _deliveryTabController,
         indicator: BoxDecoration(
-          color: AppColors.primary,
+          color: AppColors.grey100,
           borderRadius: BorderRadius.circular(10),
         ),
-        labelColor: Colors.white,
-        unselectedColor: AppColors.grey600,
-        labelStyle: const TextStyle(fontSize: 13, fontWeight: FontWeight.w600),
-        unselectedLabelStyle: const TextStyle(fontSize: 13),
+        labelColor: Colors.black,
+        unselectedLabelColor: AppColors.grey600,
+        labelStyle: const TextStyle(fontSize: 12, fontWeight: FontWeight.w600),
+        unselectedLabelStyle: const TextStyle(fontSize: 12),
         tabs: [
           Tab(child: Row(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              const Text('Pending Approvals'),
-              if (pendingCount > 0) ...[
-                const SizedBox(width: 6),
+              const Icon(Icons.local_shipping_rounded, size: 14),
+              const SizedBox(width: 4),
+              const Text('Home Delivery'),
+              if (_homeDeliveryCount > 0) ...[
+                const SizedBox(width: 4),
                 Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                  padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 1),
                   decoration: BoxDecoration(
                     color: AppColors.statusPending,
-                    borderRadius: BorderRadius.circular(10),
+                    borderRadius: BorderRadius.circular(8),
                   ),
-                  child: Text('$pendingCount', style: const TextStyle(fontSize: 11, color: Colors.white)),
+                  child: Text('$_homeDeliveryCount',
+                      style: const TextStyle(fontSize: 10, color: Colors.white)),
                 ),
               ],
             ],
@@ -375,16 +557,19 @@ class _RedemptionScreenState extends State<RedemptionScreen>
           Tab(child: Row(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              const Text('Delivery'),
-              if (deliveryCount > 0) ...[
-                const SizedBox(width: 6),
+              const Icon(Icons.store_rounded, size: 14),
+              const SizedBox(width: 4),
+              const Text('Store Pickup'),
+              if (_storePickupCount > 0) ...[
+                const SizedBox(width: 4),
                 Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                  padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 1),
                   decoration: BoxDecoration(
-                    color: AppColors.info,
-                    borderRadius: BorderRadius.circular(10),
+                    color: const Color(0xFF673AB7),
+                    borderRadius: BorderRadius.circular(8),
                   ),
-                  child: Text('$deliveryCount', style: const TextStyle(fontSize: 11, color: Colors.white)),
+                  child: Text('$_storePickupCount',
+                      style: const TextStyle(fontSize: 10, color: Colors.white)),
                 ),
               ],
             ],
@@ -394,49 +579,7 @@ class _RedemptionScreenState extends State<RedemptionScreen>
     );
   }
 
-  Widget _buildSearchBar() {
-    return TextField(
-      decoration: InputDecoration(
-        hintText: 'Search by name or phone...',
-        prefixIcon: const Icon(Icons.search, size: 20),
-        border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
-        contentPadding:
-            const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
-        isDense: true,
-      ),
-      onSubmitted: (v) {
-        _searchQuery = v.isEmpty ? null : v;
-        _loadRedemptions();
-      },
-    );
-  }
-
-  Widget _buildBody() {
-    if (_isLoading) return const Center(child: CircularProgressIndicator());
-    if (_error != null) {
-      return Center(
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Icon(Icons.error_outline, size: 48, color: AppColors.error),
-            const SizedBox(height: 12),
-            Text(_error!, style: const TextStyle(color: AppColors.error)),
-            const SizedBox(height: 12),
-            ElevatedButton(
-                onPressed: _loadRedemptions, child: const Text('Retry')),
-          ],
-        ),
-      );
-    }
-
-    return TabBarView(
-      controller: _tabController,
-      children: [
-        _buildPendingList(),
-        _buildDeliveryList(),
-      ],
-    );
-  }
+  // ── Lists ───────────────────────────────────────────────────────────────
 
   Widget _buildPendingList() {
     if (_pendingRedemptions.isEmpty) {
@@ -445,25 +588,22 @@ class _RedemptionScreenState extends State<RedemptionScreen>
     return RefreshIndicator(
       onRefresh: () => _loadRedemptions(),
       child: ListView.builder(
-        padding: const EdgeInsets.only(top: 8),
+        padding: const EdgeInsets.only(top: 4),
         itemCount: _pendingRedemptions.length,
-        itemBuilder: (ctx, i) =>
-            _buildPendingCard(_pendingRedemptions[i]),
+        itemBuilder: (ctx, i) => _buildPendingCard(_pendingRedemptions[i]),
       ),
     );
   }
 
-  Widget _buildDeliveryList() {
-    if (_approvedRedemptions.isEmpty) {
-      return _buildEmptyState('No deliveries in progress', Icons.local_shipping_outlined);
-    }
+  Widget _buildDeliveryList(
+      List<Redemption> items, String emptyMsg, IconData emptyIcon) {
+    if (items.isEmpty) return _buildEmptyState(emptyMsg, emptyIcon);
     return RefreshIndicator(
       onRefresh: () => _loadRedemptions(),
       child: ListView.builder(
-        padding: const EdgeInsets.only(top: 8),
-        itemCount: _approvedRedemptions.length,
-        itemBuilder: (ctx, i) =>
-            _buildDeliveryCard(_approvedRedemptions[i]),
+        padding: const EdgeInsets.only(top: 4),
+        itemCount: items.length,
+        itemBuilder: (ctx, i) => _buildDeliveryCard(items[i]),
       ),
     );
   }
@@ -473,235 +613,259 @@ class _RedemptionScreenState extends State<RedemptionScreen>
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
-          Icon(icon, size: 64, color: AppColors.grey300),
-          const SizedBox(height: 12),
-          Text(message,
-              style:
-                  TextStyle(color: AppColors.grey500, fontSize: 15)),
+          Icon(icon, size: 56, color: AppColors.grey300),
+          const SizedBox(height: 10),
+          Text(message, style: TextStyle(color: AppColors.grey500, fontSize: 13)),
         ],
       ),
     );
   }
 
+  // ── Pending Card ────────────────────────────────────────────────────────
+
   Widget _buildPendingCard(Redemption r) {
     return Card(
-      margin: const EdgeInsets.only(bottom: 10),
+      margin: const EdgeInsets.only(bottom: 8),
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-      elevation: 1,
+      elevation: 2,
       child: Padding(
-        padding: const EdgeInsets.all(14),
+        padding: const EdgeInsets.all(12),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
+            // Row 1: Icon + Name + Badge
             Row(
               children: [
                 Container(
-                  padding: const EdgeInsets.all(8),
+                  padding: const EdgeInsets.all(7),
                   decoration: BoxDecoration(
-                    color: AppColors.primary.withOpacity(0.08),
+                    color: AppColors.statusPending.withOpacity(0.1),
                     borderRadius: BorderRadius.circular(10),
                   ),
                   child: Icon(_deliveryIcon(r.deliveryMethod),
-                      color: AppColors.primary, size: 20),
+                      color: AppColors.statusPending, size: 18),
                 ),
-                const SizedBox(width: 12),
+                const SizedBox(width: 10),
                 Expanded(
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(r.userName,
                           style: const TextStyle(
-                              fontWeight: FontWeight.w600, fontSize: 14)),
+                              fontWeight: FontWeight.w600, fontSize: 13)),
+                      const SizedBox(height: 1),
                       Text(r.userPhone,
-                          style: TextStyle(
-                              color: AppColors.grey600, fontSize: 12)),
+                          style: TextStyle(color: AppColors.grey500, fontSize: 11)),
                     ],
                   ),
                 ),
                 _statusBadge('PENDING', AppColors.statusPending),
               ],
             ),
-            const SizedBox(height: 12),
-            Row(
-              children: [
-                _infoChip(Icons.scale_rounded, '${r.goldAmount}g', Colors.amber),
-                const SizedBox(width: 8),
-                _infoChip(Icons.payments_rounded,
-                    '${r.totalAmount.toStringAsFixed(0)} BDT', AppColors.primary),
-                const SizedBox(width: 8),
-                _infoChip(
-                  _deliveryIcon(r.deliveryMethod),
-                  r.deliveryMethod == 'home_delivery' ? 'Delivery' : 'Pickup',
-                  AppColors.grey600,
-                ),
-              ],
-            ),
+            const SizedBox(height: 10),
+
+            // Info grid
+            _infoGrid(r),
+
+            // Address
             if (r.redemptionAddress != null && r.redemptionAddress!.isNotEmpty) ...[
               const SizedBox(height: 8),
-              Row(
-                children: [
-                  Icon(Icons.location_on_outlined,
-                      size: 14, color: AppColors.grey500),
-                  const SizedBox(width: 4),
-                  Expanded(
-                    child: Text(r.redemptionAddress!,
-                        style:
-                            TextStyle(fontSize: 11, color: AppColors.grey600),
-                        maxLines: 2,
-                        overflow: TextOverflow.ellipsis),
-                  ),
-                ],
-              ),
+              _addressRow(r.redemptionAddress!),
             ],
+
+            // Footer: Date + Actions
             const SizedBox(height: 10),
             Row(
               children: [
                 Text(_formatDate(r.createdAt),
-                    style: TextStyle(fontSize: 11, color: AppColors.grey500)),
+                    style: TextStyle(fontSize: 10, color: AppColors.grey500)),
                 const Spacer(),
                 _actionBtn('Reject', AppColors.error, () => _reject(r.txId)),
-                const SizedBox(width: 8),
+                const SizedBox(width: 6),
                 _actionBtn('Approve', AppColors.success, () => _approve(r.txId)),
               ],
             ),
           ],
         ),
       ),
-    )
-        .animate()
-        .fadeIn(duration: 300.ms)
-        .slideY(begin: 0.05, end: 0, duration: 300.ms);
+    ).animate().fadeIn(duration: 250.ms).slideY(begin: 0.03, end: 0);
   }
 
+  // ── Delivery Card ───────────────────────────────────────────────────────
+
   Widget _buildDeliveryCard(Redemption r) {
-    final deliveryColor = _deliveryStatusColor(r.deliveryStatus);
-    final deliveryLabel = _deliveryStatusLabel(r.deliveryStatus);
+    final ds = r.deliveryStatus;
+    final deliveryColor = _deliveryStatusColor(ds);
+    final deliveryLabel = _deliveryStatusLabel(ds);
+    final allStatuses = _allStatusesForDeliveryType(r.deliveryMethod);
+    final currentIdx = _statusIndex(ds ?? 'PENDING', r.deliveryMethod);
+    final isComplete = currentIdx >= allStatuses.length - 1;
 
     return Card(
-      margin: const EdgeInsets.only(bottom: 10),
+      margin: const EdgeInsets.only(bottom: 8),
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-      elevation: 1,
+      elevation: 2,
       child: Padding(
-        padding: const EdgeInsets.all(14),
+        padding: const EdgeInsets.all(12),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
+            // Row 1: Icon + Name + Status badge
             Row(
               children: [
                 Container(
-                  padding: const EdgeInsets.all(8),
+                  padding: const EdgeInsets.all(7),
                   decoration: BoxDecoration(
-                    color: AppColors.primary.withOpacity(0.08),
+                    color: deliveryColor.withOpacity(0.1),
                     borderRadius: BorderRadius.circular(10),
                   ),
                   child: Icon(_deliveryIcon(r.deliveryMethod),
-                      color: AppColors.primary, size: 20),
+                      color: deliveryColor, size: 18),
                 ),
-                const SizedBox(width: 12),
+                const SizedBox(width: 10),
                 Expanded(
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(r.userName,
                           style: const TextStyle(
-                              fontWeight: FontWeight.w600, fontSize: 14)),
+                              fontWeight: FontWeight.w600, fontSize: 13)),
+                      const SizedBox(height: 1),
                       Text(r.userPhone,
-                          style: TextStyle(
-                              color: AppColors.grey600, fontSize: 12)),
+                          style: TextStyle(color: AppColors.grey500, fontSize: 11)),
                     ],
                   ),
                 ),
                 _statusBadge(deliveryLabel, deliveryColor),
               ],
             ),
-            const SizedBox(height: 12),
-            Row(
-              children: [
-                _infoChip(Icons.scale_rounded, '${r.goldAmount}g', Colors.amber),
-                const SizedBox(width: 8),
-                _infoChip(Icons.payments_rounded,
-                    '${r.totalAmount.toStringAsFixed(0)} BDT', AppColors.primary),
-                const SizedBox(width: 8),
-                _infoChip(
-                  _deliveryIcon(r.deliveryMethod),
-                  r.deliveryMethod == 'home_delivery' ? 'Delivery' : 'Pickup',
-                  AppColors.grey600,
-                ),
-              ],
-            ),
+            const SizedBox(height: 10),
+
+            // Info grid
+            _infoGrid(r),
+
+            // Address
             if (r.redemptionAddress != null && r.redemptionAddress!.isNotEmpty) ...[
               const SizedBox(height: 8),
-              Row(
-                children: [
-                  Icon(Icons.location_on_outlined,
-                      size: 14, color: AppColors.grey500),
-                  const SizedBox(width: 4),
-                  Expanded(
-                    child: Text(r.redemptionAddress!,
-                        style:
-                            TextStyle(fontSize: 11, color: AppColors.grey600),
-                        maxLines: 2,
-                        overflow: TextOverflow.ellipsis),
-                  ),
-                ],
-              ),
+              _addressRow(r.redemptionAddress!),
             ],
+
+            // Admin note
             if (r.adminNote != null && r.adminNote!.isNotEmpty) ...[
               const SizedBox(height: 6),
               Container(
-                padding: const EdgeInsets.all(8),
+                padding: const EdgeInsets.all(7),
                 decoration: BoxDecoration(
                   color: AppColors.grey100,
                   borderRadius: BorderRadius.circular(8),
                 ),
                 child: Row(
                   children: [
-                    Icon(Icons.note_alt_outlined,
-                        size: 14, color: AppColors.grey600),
-                    const SizedBox(width: 6),
+                    Icon(Icons.note_alt_outlined, size: 13, color: AppColors.grey600),
+                    const SizedBox(width: 5),
                     Expanded(
                         child: Text(r.adminNote!,
-                            style: TextStyle(
-                                fontSize: 11, color: AppColors.grey700))),
+                            style: TextStyle(fontSize: 11, color: AppColors.grey700))),
                   ],
                 ),
               ),
             ],
+
+            // Footer: Date + Update Status / Complete
             const SizedBox(height: 10),
             Row(
               children: [
                 Text(_formatDate(r.createdAt),
-                    style: TextStyle(fontSize: 11, color: AppColors.grey500)),
+                    style: TextStyle(fontSize: 10, color: AppColors.grey500)),
                 const Spacer(),
-                _actionBtn('Update Status', AppColors.info,
-                    () => _showDeliveryStatusDialog(r.txId, r.deliveryStatus ?? 'APPROVED')),
+                if (!isComplete)
+                  _actionBtn(
+                    'Update Status',
+                    AppColors.info,
+                    () => _showUpdateStatusDialog(r),
+                  )
+                else
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+                    decoration: BoxDecoration(
+                      color: AppColors.success.withOpacity(0.1),
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Icon(Icons.check_circle_rounded, size: 13, color: AppColors.success),
+                        const SizedBox(width: 4),
+                        Text('Complete',
+                            style: TextStyle(
+                                fontSize: 11,
+                                color: AppColors.success,
+                                fontWeight: FontWeight.w600)),
+                      ],
+                    ),
+                  ),
               ],
             ),
           ],
         ),
       ),
-    )
-        .animate()
-        .fadeIn(duration: 300.ms)
-        .slideY(begin: 0.05, end: 0, duration: 300.ms);
+    ).animate().fadeIn(duration: 250.ms).slideY(begin: 0.03, end: 0);
+  }
+
+  // ── Shared card widgets ─────────────────────────────────────────────────
+
+  Widget _infoGrid(Redemption r) {
+    return Wrap(
+      spacing: 6,
+      runSpacing: 4,
+      children: [
+        _infoChip(Icons.scale_rounded, '${r.goldAmount}g', Colors.amber),
+        _infoChip(Icons.payments_rounded,
+            '${r.totalAmount.toStringAsFixed(0)} BDT', AppColors.primary),
+        _infoChip(
+          _deliveryIcon(r.deliveryMethod),
+          r.deliveryMethod.toUpperCase() == 'STORE_PICKUP' ? 'Store Pickup' : 'Home Delivery',
+          AppColors.grey600,
+        ),
+        if (r.userEmail.isNotEmpty)
+          _infoChip(Icons.email_outlined, r.userEmail, AppColors.grey600),
+        _infoChip(Icons.receipt_long_outlined, 'Fee: ${r.feeAmount.toStringAsFixed(0)}', AppColors.grey600),
+        _infoChip(Icons.receipt_long_outlined, 'VAT: ${r.vatAmount.toStringAsFixed(0)}', AppColors.grey600),
+      ],
+    );
+  }
+
+  Widget _addressRow(String address) {
+    return Row(
+      children: [
+        Icon(Icons.location_on_outlined, size: 13, color: AppColors.grey500),
+        const SizedBox(width: 4),
+        Expanded(
+          child: Text(address,
+              style: TextStyle(fontSize: 11, color: AppColors.grey600),
+              maxLines: 2,
+              overflow: TextOverflow.ellipsis),
+        ),
+      ],
+    );
   }
 
   Widget _statusBadge(String label, Color color) {
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
       decoration: BoxDecoration(
         color: color.withOpacity(0.1),
-        borderRadius: BorderRadius.circular(12),
+        borderRadius: BorderRadius.circular(10),
       ),
       child: Text(label,
           style: TextStyle(
-              color: color, fontSize: 11, fontWeight: FontWeight.w600)),
+              color: color, fontSize: 10, fontWeight: FontWeight.w600)),
     );
   }
 
   Widget _infoChip(IconData icon, String text, Color color) {
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+      padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 3),
       decoration: BoxDecoration(
         color: color.withOpacity(0.08),
         borderRadius: BorderRadius.circular(8),
@@ -709,11 +873,14 @@ class _RedemptionScreenState extends State<RedemptionScreen>
       child: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
-          Icon(icon, size: 12, color: color),
-          const SizedBox(width: 4),
-          Text(text,
-              style: TextStyle(
-                  fontSize: 11, color: color, fontWeight: FontWeight.w600)),
+          Icon(icon, size: 11, color: color),
+          const SizedBox(width: 3),
+          Flexible(
+            child: Text(text,
+                style: TextStyle(
+                    fontSize: 10, color: color, fontWeight: FontWeight.w600),
+                overflow: TextOverflow.ellipsis),
+          ),
         ],
       ),
     );
@@ -724,7 +891,7 @@ class _RedemptionScreenState extends State<RedemptionScreen>
       onTap: onTap,
       borderRadius: BorderRadius.circular(8),
       child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
         decoration: BoxDecoration(
           color: color.withOpacity(0.1),
           borderRadius: BorderRadius.circular(8),
@@ -732,7 +899,23 @@ class _RedemptionScreenState extends State<RedemptionScreen>
         ),
         child: Text(label,
             style: TextStyle(
-                fontSize: 12, color: color, fontWeight: FontWeight.w600)),
+                fontSize: 11, color: color, fontWeight: FontWeight.w600)),
+      ),
+    );
+  }
+
+  Widget _buildErrorState() {
+    return Center(
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(Icons.error_outline, size: 48, color: AppColors.error),
+          const SizedBox(height: 12),
+          Text(_error!, style: const TextStyle(color: AppColors.error)),
+          const SizedBox(height: 12),
+          ElevatedButton(
+              onPressed: _loadRedemptions, child: const Text('Retry')),
+        ],
       ),
     );
   }

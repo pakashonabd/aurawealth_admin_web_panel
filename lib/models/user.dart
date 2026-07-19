@@ -168,7 +168,7 @@ class User {
       otpVerified: _b(json['otp_verified']),
       phoneVerified:
           _b(json['phone_verified']) ?? _b(json['otp_verified']) ?? false,
-      kycStatus: json['kyc_status']?.toString() ?? 'pending',
+      kycStatus: (json['kyc_status'] ?? json['kycStatus'])?.toString() ?? 'pending',
       totalGrams: _d(wallet['total_grams'] ?? json['total_grams']),
       lockedGrams: _d(wallet['locked_grams'] ?? json['locked_grams']),
       availableGrams: _d(wallet['available_grams'] ?? json['available_grams']),
