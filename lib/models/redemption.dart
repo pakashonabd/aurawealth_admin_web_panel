@@ -67,4 +67,27 @@ class Redemption {
       approvedAt: json['approved_at'],
     );
   }
+
+  Map<String, dynamic> toJson() => {
+    'tx_id': txId,
+    'user_id': userId,
+    'user_name': userName,
+    'user_phone': userPhone,
+    'user_email': userEmail,
+    'user_bank_name': userBankName,
+    'user_bank_account': userBankAccount,
+    'user_total_grams': userTotalGrams,
+    'user_locked_grams': userLockedGrams,
+    'delivery_method': deliveryMethod,
+    'delivery_status': deliveryStatus,
+    'approval_status': approvalStatus,
+    'admin_note': adminNote,
+    'redemption_address': redemptionAddress,
+    'gold_amount': goldAmount,
+    'fee_amount': feeAmount,
+    'vat_amount': vatAmount,
+    'total_amount': totalAmount,
+    'created_at': createdAt,
+    'approved_at': approvedAt,
+  };
 }
