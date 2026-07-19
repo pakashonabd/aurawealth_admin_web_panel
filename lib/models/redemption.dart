@@ -4,6 +4,10 @@ class Redemption {
   final String userName;
   final String userPhone;
   final String userEmail;
+  final String? userBankName;
+  final String? userBankAccount;
+  final double userTotalGrams;
+  final double userLockedGrams;
   final String deliveryMethod;
   final String? deliveryStatus;
   final String approvalStatus;
@@ -14,6 +18,7 @@ class Redemption {
   final double vatAmount;
   final double totalAmount;
   final String createdAt;
+  final String? approvedAt;
 
   Redemption({
     required this.txId,
@@ -21,6 +26,10 @@ class Redemption {
     required this.userName,
     required this.userPhone,
     required this.userEmail,
+    this.userBankName,
+    this.userBankAccount,
+    this.userTotalGrams = 0.0,
+    this.userLockedGrams = 0.0,
     required this.deliveryMethod,
     this.deliveryStatus,
     required this.approvalStatus,
@@ -31,6 +40,7 @@ class Redemption {
     required this.vatAmount,
     required this.totalAmount,
     required this.createdAt,
+    this.approvedAt,
   });
 
   factory Redemption.fromJson(Map<String, dynamic> json) {
@@ -40,6 +50,10 @@ class Redemption {
       userName: json['user_name'] ?? '',
       userPhone: json['user_phone'] ?? '',
       userEmail: json['user_email'] ?? '',
+      userBankName: json['user_bank_name'],
+      userBankAccount: json['user_bank_account'],
+      userTotalGrams: (json['user_total_grams'] ?? 0).toDouble(),
+      userLockedGrams: (json['user_locked_grams'] ?? 0).toDouble(),
       deliveryMethod: json['delivery_method'] ?? '',
       deliveryStatus: json['delivery_status'],
       approvalStatus: json['approval_status'] ?? '',
@@ -50,6 +64,7 @@ class Redemption {
       vatAmount: (json['vat_amount'] ?? 0).toDouble(),
       totalAmount: (json['total_amount'] ?? 0).toDouble(),
       createdAt: json['created_at'] ?? '',
+      approvedAt: json['approved_at'],
     );
   }
 }

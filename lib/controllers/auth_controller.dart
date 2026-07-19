@@ -1,5 +1,7 @@
 // ignore_for_file: avoid_print
 
+import 'dart:async';
+import 'package:http/http.dart' as http;
 import 'package:get/get.dart';
 import '../services/api_service.dart';
 import '../services/storage_service.dart';
@@ -15,6 +17,8 @@ class AuthController extends GetxController {
   final RxString errorMessage = ''.obs;
   final RxBool isAuthenticated = false.obs;
 
+  Timer? _keepAliveTimer;
+
   String get baseUrl => AppConstants.baseUrl;
   String get token => _storage.getAuthToken() ?? '';
 
@@ -24,8 +28,34 @@ class AuthController extends GetxController {
     checkAuthStatus();
   }
 
+  @override
+  void onClose() {
+    _keepAliveTimer?.cancel();
+    super.onClose();
+  }
+
   void checkAuthStatus() {
     isAuthenticated.value = _storage.isAuthenticated;
+    if (isAuthenticated.value) _startKeepAlive();
+  }
+
+  void _startKeepAlive() {
+    _keepAliveTimer?.cancel();
+    _keepAliveTimer = Timer.periodic(const Duration(minutes: 4), (_) {
+      _warmPing();
+    });
+    _warmPing();
+  }
+
+  void _warmPing() {
+    try {
+      final url = Uri.parse('${AppConstants.baseUrl}/admin/dashboard');
+      final token = _storage.getAuthToken();
+      http.get(url, headers: {
+        'Authorization': 'Bearer $token',
+        'Content-Type': 'application/json',
+      }).timeout(const Duration(seconds: 5)).catchError((_) {});
+    } catch (_) {}
   }
 
   Future<void> login(String email, String password) async {
@@ -41,9 +71,10 @@ class AuthController extends GetxController {
         await _storage.saveUserEmail(email);
         isAuthenticated.value = true;
 
-        // Navigate FIRST — FCM init runs in background, never blocks login
+        // Navigate FIRST — never block on FCM
         Get.offAllNamed(AppRoutes.dashboard);
         initAdminFCM();
+        _startKeepAlive();
       } else {
         throw Exception('Invalid response from server');
       }
@@ -63,6 +94,7 @@ class AuthController extends GetxController {
   }
 
   Future<void> logout() async {
+    _keepAliveTimer?.cancel();
     await _storage.clearAll();
     isAuthenticated.value = false;
     Get.offAllNamed(AppRoutes.login);

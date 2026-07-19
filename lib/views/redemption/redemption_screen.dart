@@ -2,6 +2,7 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:flutter_animate/flutter_animate.dart';
+import 'package:shimmer/shimmer.dart';
 import '../../models/redemption.dart';
 import '../../services/api_service.dart';
 import '../../core/constants/app_colors.dart';
@@ -28,11 +29,14 @@ class _RedemptionScreenState extends State<RedemptionScreen>
   // History drawer state
   List<Redemption> _historyRedemptions = [];
   bool _isLoadingHistory = false;
+  bool _historyLoaded = false;
   String? _historySearchQuery;
   String? _historyStatusFilter;
   String? _historyDeliveryMethodFilter;
   String _historySortBy = 'created_at';
   String _historySortOrder = 'desc';
+  Timer? _historySearchDebounce;
+  int _historyTotal = 0;
 
   @override
   void initState() {
@@ -45,6 +49,7 @@ class _RedemptionScreenState extends State<RedemptionScreen>
   @override
   void dispose() {
     _pollTimer?.cancel();
+    _historySearchDebounce?.cancel();
     _deliveryTabController.dispose();
     super.dispose();
   }
@@ -63,7 +68,7 @@ class _RedemptionScreenState extends State<RedemptionScreen>
       });
     }
     try {
-      final res = await _api.getRedemptions(search: _searchQuery, limit: 500);
+      final res = await _api.getRedemptions(search: _searchQuery, limit: 50);
       final list = (res['redemptions'] as List<dynamic>? ?? [])
           .map((j) => Redemption.fromJson(j as Map<String, dynamic>))
           .toList();
@@ -409,7 +414,7 @@ class _RedemptionScreenState extends State<RedemptionScreen>
   // ── History Drawer ──────────────────────────────────────────────────────
 
   void _openHistoryDrawer() {
-    _loadHistory();
+    if (!_historyLoaded) _loadHistory();
     showGeneralDialog(
       context: context,
       barrierDismissible: true,
@@ -427,7 +432,7 @@ class _RedemptionScreenState extends State<RedemptionScreen>
             child: Material(
               elevation: 16,
               child: Container(
-                width: MediaQuery.of(ctx).size.width * 0.65,
+                width: MediaQuery.of(ctx).size.width * 0.30,
                 height: double.infinity,
                 color: Colors.white,
                 child: _buildHistoryDrawerContent(ctx),
@@ -448,15 +453,28 @@ class _RedemptionScreenState extends State<RedemptionScreen>
         search: _historySearchQuery,
         sortBy: _historySortBy,
         sortOrder: _historySortOrder,
-        limit: 200,
+        limit: 50,
       );
       final list = (res['redemptions'] as List<dynamic>? ?? [])
           .map((j) => Redemption.fromJson(j as Map<String, dynamic>))
           .toList();
-      if (mounted) setState(() { _historyRedemptions = list; _isLoadingHistory = false; });
+      if (mounted) setState(() {
+        _historyRedemptions = list;
+        _historyTotal = res['total'] ?? list.length;
+        _isLoadingHistory = false;
+        _historyLoaded = true;
+      });
     } catch (e) {
       if (mounted) setState(() => _isLoadingHistory = false);
     }
+  }
+
+  void _onHistorySearchChanged(String value) {
+    _historySearchDebounce?.cancel();
+    _historySearchDebounce = Timer(const Duration(milliseconds: 400), () {
+      _historySearchQuery = value.trim().isEmpty ? null : value.trim();
+      _loadHistory();
+    });
   }
 
   Widget _buildHistoryDrawerContent(BuildContext ctx) {
@@ -466,21 +484,23 @@ class _RedemptionScreenState extends State<RedemptionScreen>
           children: [
             // Header
             Container(
-              padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
               decoration: BoxDecoration(
                 color: const Color(0xFFD32F2F),
                 boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.1), blurRadius: 4)],
               ),
               child: Row(
                 children: [
-                  const Icon(Icons.history_rounded, color: Colors.white, size: 22),
-                  const SizedBox(width: 10),
+                  const Icon(Icons.history_rounded, color: Colors.white, size: 20),
+                  const SizedBox(width: 8),
                   const Expanded(
                     child: Text('Redemption History',
-                        style: TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.w600)),
+                        style: TextStyle(color: Colors.white, fontSize: 15, fontWeight: FontWeight.w600)),
                   ),
                   IconButton(
-                    icon: const Icon(Icons.close, color: Colors.white),
+                    icon: const Icon(Icons.close, color: Colors.white, size: 20),
+                    padding: EdgeInsets.zero,
+                    constraints: const BoxConstraints(),
                     onPressed: () => Navigator.of(ctx).pop(),
                   ),
                 ],
@@ -488,101 +508,111 @@ class _RedemptionScreenState extends State<RedemptionScreen>
             ),
             // Filters
             Container(
-              padding: const EdgeInsets.all(12),
+              padding: const EdgeInsets.all(10),
               color: Colors.grey.shade50,
               child: Column(
                 children: [
+                  TextField(
+                    decoration: InputDecoration(
+                      hintText: 'Search user...',
+                      prefixIcon: const Icon(Icons.search, size: 16),
+                      border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
+                      contentPadding: const EdgeInsets.symmetric(horizontal: 10, vertical: 7),
+                      isDense: true,
+                    ),
+                    onChanged: _onHistorySearchChanged,
+                    onSubmitted: (v) {
+                      _historySearchQuery = v.trim().isEmpty ? null : v.trim();
+                      _loadHistory();
+                      setDrawerState(() {});
+                    },
+                  ),
+                  const SizedBox(height: 8),
                   Row(
                     children: [
                       Expanded(
-                        child: TextField(
-                          decoration: InputDecoration(
-                            hintText: 'Search user...',
-                            prefixIcon: const Icon(Icons.search, size: 18),
-                            border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
-                            contentPadding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
-                            isDense: true,
+                        child: Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 8),
+                          decoration: BoxDecoration(
+                            border: Border.all(color: Colors.grey.shade300),
+                            borderRadius: BorderRadius.circular(8),
                           ),
-                          onSubmitted: (v) {
-                            _historySearchQuery = v.isEmpty ? null : v;
-                            _loadHistory();
-                            setDrawerState(() {});
-                          },
-                        ),
-                      ),
-                      const SizedBox(width: 8),
-                      Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 8),
-                        decoration: BoxDecoration(
-                          border: Border.all(color: Colors.grey.shade300),
-                          borderRadius: BorderRadius.circular(8),
-                        ),
-                        child: DropdownButtonHideUnderline(
-                          child: DropdownButton<String>(
-                            value: _historyStatusFilter,
-                            hint: const Text('Status', style: TextStyle(fontSize: 13)),
-                            isDense: true,
-                            items: const [
-                              DropdownMenuItem(value: null, child: Text('All Status')),
-                              DropdownMenuItem(value: 'pending', child: Text('Pending')),
-                              DropdownMenuItem(value: 'approved', child: Text('Approved')),
-                              DropdownMenuItem(value: 'rejected', child: Text('Rejected')),
-                            ],
-                            onChanged: (v) { _historyStatusFilter = v; _loadHistory(); setDrawerState(() {}); },
+                          child: DropdownButtonHideUnderline(
+                            child: DropdownButton<String>(
+                              value: _historyStatusFilter,
+                              hint: const Text('Status', style: TextStyle(fontSize: 12)),
+                              isDense: true,
+                              isExpanded: true,
+                              items: const [
+                                DropdownMenuItem(value: null, child: Text('All Status')),
+                                DropdownMenuItem(value: 'pending', child: Text('Pending')),
+                                DropdownMenuItem(value: 'approved', child: Text('Approved')),
+                                DropdownMenuItem(value: 'rejected', child: Text('Rejected')),
+                              ],
+                              onChanged: (v) { _historyStatusFilter = v; _loadHistory(); setDrawerState(() {}); },
+                            ),
                           ),
                         ),
                       ),
-                      const SizedBox(width: 8),
-                      Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 8),
-                        decoration: BoxDecoration(
-                          border: Border.all(color: Colors.grey.shade300),
-                          borderRadius: BorderRadius.circular(8),
-                        ),
-                        child: DropdownButtonHideUnderline(
-                          child: DropdownButton<String>(
-                            value: _historyDeliveryMethodFilter,
-                            hint: const Text('Type', style: TextStyle(fontSize: 13)),
-                            isDense: true,
-                            items: const [
-                              DropdownMenuItem(value: null, child: Text('All Types')),
-                              DropdownMenuItem(value: 'delivery', child: Text('Home Delivery')),
-                              DropdownMenuItem(value: 'store_pickup', child: Text('Store Pickup')),
-                            ],
-                            onChanged: (v) { _historyDeliveryMethodFilter = v; _loadHistory(); setDrawerState(() {}); },
+                      const SizedBox(width: 6),
+                      Expanded(
+                        child: Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 8),
+                          decoration: BoxDecoration(
+                            border: Border.all(color: Colors.grey.shade300),
+                            borderRadius: BorderRadius.circular(8),
+                          ),
+                          child: DropdownButtonHideUnderline(
+                            child: DropdownButton<String>(
+                              value: _historyDeliveryMethodFilter,
+                              hint: const Text('Type', style: TextStyle(fontSize: 12)),
+                              isDense: true,
+                              isExpanded: true,
+                              items: const [
+                                DropdownMenuItem(value: null, child: Text('All Types')),
+                                DropdownMenuItem(value: 'delivery', child: Text('Delivery')),
+                                DropdownMenuItem(value: 'store_pickup', child: Text('Pickup')),
+                              ],
+                              onChanged: (v) { _historyDeliveryMethodFilter = v; _loadHistory(); setDrawerState(() {}); },
+                            ),
                           ),
                         ),
                       ),
                     ],
                   ),
-                  const SizedBox(height: 8),
+                  const SizedBox(height: 6),
                   Row(
                     children: [
-                      Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 8),
-                        decoration: BoxDecoration(
-                          border: Border.all(color: Colors.grey.shade300),
-                          borderRadius: BorderRadius.circular(8),
-                        ),
-                        child: DropdownButtonHideUnderline(
-                          child: DropdownButton<String>(
-                            value: _historySortBy,
-                            isDense: true,
-                            items: const [
-                              DropdownMenuItem(value: 'created_at', child: Text('Date')),
-                              DropdownMenuItem(value: 'gold_amount', child: Text('Gold')),
-                              DropdownMenuItem(value: 'total_amount', child: Text('Amount')),
-                            ],
-                            onChanged: (v) { _historySortBy = v ?? 'created_at'; _loadHistory(); setDrawerState(() {}); },
+                      Expanded(
+                        child: Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 8),
+                          decoration: BoxDecoration(
+                            border: Border.all(color: Colors.grey.shade300),
+                            borderRadius: BorderRadius.circular(8),
+                          ),
+                          child: DropdownButtonHideUnderline(
+                            child: DropdownButton<String>(
+                              value: _historySortBy,
+                              isDense: true,
+                              isExpanded: true,
+                              items: const [
+                                DropdownMenuItem(value: 'created_at', child: Text('Date')),
+                                DropdownMenuItem(value: 'gold_amount', child: Text('Gold')),
+                                DropdownMenuItem(value: 'total_amount', child: Text('Amount')),
+                              ],
+                              onChanged: (v) { _historySortBy = v ?? 'created_at'; _loadHistory(); setDrawerState(() {}); },
+                            ),
                           ),
                         ),
                       ),
-                      const SizedBox(width: 8),
+                      const SizedBox(width: 6),
                       IconButton(
                         icon: Icon(
                           _historySortOrder == 'desc' ? Icons.arrow_downward : Icons.arrow_upward,
-                          size: 18,
+                          size: 16,
                         ),
+                        padding: EdgeInsets.zero,
+                        constraints: const BoxConstraints(),
                         onPressed: () {
                           _historySortOrder = _historySortOrder == 'desc' ? 'asc' : 'desc';
                           _loadHistory();
@@ -590,9 +620,9 @@ class _RedemptionScreenState extends State<RedemptionScreen>
                         },
                         tooltip: 'Toggle sort order',
                       ),
-                      const Spacer(),
-                      Text('${_historyRedemptions.length} results',
-                          style: TextStyle(fontSize: 12, color: Colors.grey.shade600)),
+                      const SizedBox(width: 8),
+                      Text('$_historyTotal total',
+                          style: TextStyle(fontSize: 11, color: Colors.grey.shade500)),
                     ],
                   ),
                 ],
@@ -600,19 +630,78 @@ class _RedemptionScreenState extends State<RedemptionScreen>
             ),
             // List
             Expanded(
-              child: _isLoadingHistory
-                  ? const Center(child: CircularProgressIndicator())
-                  : _historyRedemptions.isEmpty
-                      ? const Center(child: Text('No redemptions found'))
-                      : ListView.builder(
-                          padding: const EdgeInsets.all(12),
-                          itemCount: _historyRedemptions.length,
-                          itemBuilder: (_, i) => _buildHistoryCard(_historyRedemptions[i]),
-                        ),
+              child: _isLoadingHistory && !_historyLoaded
+                  ? _buildShimmerSkeleton()
+                  : _isLoadingHistory
+                      ? _buildHistoryList(setDrawerState)
+                      : _historyRedemptions.isEmpty
+                          ? const Center(child: Text('No redemptions found'))
+                          : _buildHistoryList(setDrawerState),
             ),
           ],
         );
       },
+    );
+  }
+
+  Widget _buildHistoryList(StateSetter setDrawerState) {
+    return ListView.builder(
+      padding: const EdgeInsets.all(10),
+      itemCount: _historyRedemptions.length,
+      itemBuilder: (_, i) => _buildHistoryCard(_historyRedemptions[i]),
+    );
+  }
+
+  Widget _buildShimmerSkeleton() {
+    return Shimmer.fromColors(
+      baseColor: Colors.grey.shade300,
+      highlightColor: Colors.grey.shade100,
+      child: ListView.builder(
+        padding: const EdgeInsets.all(10),
+        itemCount: 6,
+        itemBuilder: (_, __) => Container(
+          margin: const EdgeInsets.only(bottom: 10),
+          padding: const EdgeInsets.all(14),
+          decoration: BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(12),
+          ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                children: [
+                  Container(width: 36, height: 36, decoration: BoxDecoration(color: Colors.white, shape: BoxShape.circle)),
+                  const SizedBox(width: 10),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Container(height: 12, width: 100, color: Colors.white),
+                        const SizedBox(height: 4),
+                        Container(height: 10, width: 80, color: Colors.white),
+                      ],
+                    ),
+                  ),
+                  Container(height: 22, width: 60, decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(12))),
+                ],
+              ),
+              const SizedBox(height: 12),
+              Row(children: [
+                Container(height: 10, width: 70, color: Colors.white),
+                const SizedBox(width: 12),
+                Container(height: 10, width: 50, color: Colors.white),
+                const SizedBox(width: 12),
+                Container(height: 10, width: 60, color: Colors.white),
+              ]),
+              const SizedBox(height: 8),
+              Container(height: 10, width: double.infinity, color: Colors.white),
+              const SizedBox(height: 4),
+              Container(height: 10, width: 180, color: Colors.white),
+            ],
+          ),
+        ),
+      ),
     );
   }
 
@@ -625,90 +714,131 @@ class _RedemptionScreenState extends State<RedemptionScreen>
     final deliveryLabel = r.deliveryStatus != null
         ? r.deliveryStatus!.replaceAll('_', ' ').toUpperCase()
         : 'N/A';
+    final deliveryColor = _deliveryStatusColor(r.deliveryStatus);
 
     return Container(
-      margin: const EdgeInsets.only(bottom: 10),
-      padding: const EdgeInsets.all(14),
+      margin: const EdgeInsets.only(bottom: 8),
+      padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
         color: Colors.white,
-        borderRadius: BorderRadius.circular(12),
+        borderRadius: BorderRadius.circular(10),
         border: Border.all(color: Colors.grey.shade200),
-        boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.03), blurRadius: 4, offset: const Offset(0, 2))],
+        boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.03), blurRadius: 3, offset: const Offset(0, 1))],
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // Top row: user + status
+          // Top row: user avatar + name + status badge
           Row(
             children: [
               CircleAvatar(
-                radius: 18,
+                radius: 16,
                 backgroundColor: statusColor.withOpacity(0.1),
-                child: Icon(Icons.person, size: 18, color: statusColor),
+                child: Icon(Icons.person, size: 16, color: statusColor),
               ),
-              const SizedBox(width: 10),
+              const SizedBox(width: 8),
               Expanded(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text(r.userName ?? 'Unknown', style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 13)),
-                    Text(r.userPhone ?? '', style: TextStyle(fontSize: 11, color: Colors.grey.shade600)),
+                    Text(r.userName.isNotEmpty ? r.userName : 'Unknown User',
+                        style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 12),
+                        maxLines: 1, overflow: TextOverflow.ellipsis),
+                    Text(r.userPhone.isNotEmpty ? r.userPhone : (r.userEmail.isNotEmpty ? r.userEmail : 'No contact'),
+                        style: TextStyle(fontSize: 10, color: Colors.grey.shade500),
+                        maxLines: 1, overflow: TextOverflow.ellipsis),
                   ],
                 ),
               ),
               Container(
-                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-                decoration: BoxDecoration(color: statusColor.withOpacity(0.1), borderRadius: BorderRadius.circular(12)),
-                child: Text(r.approvalStatus.toUpperCase(), style: TextStyle(fontSize: 10, fontWeight: FontWeight.w600, color: statusColor)),
+                padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                decoration: BoxDecoration(color: statusColor.withOpacity(0.1), borderRadius: BorderRadius.circular(8)),
+                child: Text(r.approvalStatus.toUpperCase(), style: TextStyle(fontSize: 9, fontWeight: FontWeight.w600, color: statusColor)),
               ),
             ],
           ),
-          const Divider(height: 16),
-          // Details grid
+          const SizedBox(height: 8),
+
+          // User details section (email, bank)
+          if (r.userEmail.isNotEmpty || r.userBankName != null)
+            Container(
+              padding: const EdgeInsets.all(8),
+              decoration: BoxDecoration(
+                color: Colors.grey.shade50,
+                borderRadius: BorderRadius.circular(8),
+              ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  if (r.userEmail.isNotEmpty)
+                    _historyUserDetail(Icons.email_outlined, 'Email', r.userEmail),
+                  if (r.userBankName != null && r.userBankName!.isNotEmpty)
+                    _historyUserDetail(Icons.account_balance_rounded, 'Bank', '${r.userBankName}${r.userBankAccount != null ? ' - ${r.userBankAccount}' : ''}'),
+                  if (r.userTotalGrams > 0)
+                    _historyUserDetail(Icons.savings_outlined, 'Wallet', '${r.userTotalGrams.toStringAsFixed(2)}g total, ${r.userLockedGrams.toStringAsFixed(2)}g locked'),
+                ],
+              ),
+            ),
+
+          const SizedBox(height: 8),
+          // Transaction details
           Wrap(
-            spacing: 16,
-            runSpacing: 8,
+            spacing: 10,
+            runSpacing: 4,
             children: [
               _historyDetail('Type', r.deliveryMethod == 'delivery' ? 'Home Delivery' : 'Store Pickup'),
               _historyDetail('Gold', '${r.goldAmount.toStringAsFixed(2)}g'),
-              _historyDetail('Fee', '৳${r.feeAmount.toStringAsFixed(0)}'),
-              _historyDetail('VAT', '৳${r.vatAmount.toStringAsFixed(0)}'),
               _historyDetail('Total', '৳${r.totalAmount.toStringAsFixed(0)}'),
               _historyDetail('Delivery', deliveryLabel),
             ],
           ),
+
           if (r.adminNote != null && r.adminNote!.isNotEmpty) ...[
-            const SizedBox(height: 8),
+            const SizedBox(height: 6),
             Container(
-              padding: const EdgeInsets.all(8),
-              decoration: BoxDecoration(color: Colors.grey.shade100, borderRadius: BorderRadius.circular(8)),
+              padding: const EdgeInsets.all(6),
+              decoration: BoxDecoration(color: Colors.grey.shade100, borderRadius: BorderRadius.circular(6)),
               child: Row(
                 children: [
-                  Icon(Icons.note, size: 14, color: Colors.grey.shade600),
-                  const SizedBox(width: 6),
-                  Expanded(child: Text(r.adminNote!, style: TextStyle(fontSize: 11, color: Colors.grey.shade700))),
+                  Icon(Icons.note, size: 12, color: Colors.grey.shade500),
+                  const SizedBox(width: 4),
+                  Expanded(child: Text(r.adminNote!, style: TextStyle(fontSize: 10, color: Colors.grey.shade600), maxLines: 2, overflow: TextOverflow.ellipsis)),
                 ],
               ),
             ),
           ],
           if (r.redemptionAddress != null && r.redemptionAddress!.isNotEmpty) ...[
-            const SizedBox(height: 6),
+            const SizedBox(height: 4),
             Row(
               children: [
-                Icon(Icons.location_on_outlined, size: 14, color: Colors.grey.shade500),
-                const SizedBox(width: 4),
-                Expanded(child: Text(r.redemptionAddress!, style: TextStyle(fontSize: 11, color: Colors.grey.shade600))),
+                Icon(Icons.location_on_outlined, size: 11, color: Colors.grey.shade400),
+                const SizedBox(width: 3),
+                Expanded(child: Text(r.redemptionAddress!, style: TextStyle(fontSize: 10, color: Colors.grey.shade500), maxLines: 2, overflow: TextOverflow.ellipsis)),
               ],
             ),
           ],
-          const SizedBox(height: 6),
+          const SizedBox(height: 4),
           Row(
             children: [
-              Icon(Icons.access_time, size: 12, color: Colors.grey.shade400),
-              const SizedBox(width: 4),
-              Text(r.createdAt, style: TextStyle(fontSize: 10, color: Colors.grey.shade500)),
+              Icon(Icons.access_time, size: 10, color: Colors.grey.shade400),
+              const SizedBox(width: 3),
+              Text(r.createdAt, style: TextStyle(fontSize: 9, color: Colors.grey.shade400)),
             ],
           ),
+        ],
+      ),
+    );
+  }
+
+  Widget _historyUserDetail(IconData icon, String label, String value) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 2),
+      child: Row(
+        children: [
+          Icon(icon, size: 11, color: Colors.grey.shade500),
+          const SizedBox(width: 4),
+          Text('$label: ', style: TextStyle(fontSize: 10, color: Colors.grey.shade500, fontWeight: FontWeight.w500)),
+          Expanded(child: Text(value, style: TextStyle(fontSize: 10, color: Colors.grey.shade700), maxLines: 1, overflow: TextOverflow.ellipsis)),
         ],
       ),
     );
