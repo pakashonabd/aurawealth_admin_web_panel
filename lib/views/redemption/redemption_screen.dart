@@ -37,6 +37,7 @@ class _RedemptionScreenState extends State<RedemptionScreen>
   String _historySortOrder = 'desc';
   Timer? _historySearchDebounce;
   int _historyTotal = 0;
+  StateSetter? _drawerSetState;
 
   @override
   void initState() {
@@ -414,6 +415,7 @@ class _RedemptionScreenState extends State<RedemptionScreen>
   // ── History Drawer ──────────────────────────────────────────────────────
 
   void _openHistoryDrawer() {
+    _drawerSetState = null;
     if (!_historyLoaded) _loadHistory();
     showGeneralDialog(
       context: context,
@@ -441,11 +443,12 @@ class _RedemptionScreenState extends State<RedemptionScreen>
           ),
         );
       },
-    );
+    ).then((_) => _drawerSetState = null);
   }
 
   Future<void> _loadHistory() async {
     if (mounted) setState(() => _isLoadingHistory = true);
+    _drawerSetState?.call(() {});
     try {
       final res = await _api.getRedemptionHistory(
         status: _historyStatusFilter,
@@ -464,8 +467,10 @@ class _RedemptionScreenState extends State<RedemptionScreen>
         _isLoadingHistory = false;
         _historyLoaded = true;
       });
+      _drawerSetState?.call(() {});
     } catch (e) {
       if (mounted) setState(() => _isLoadingHistory = false);
+      _drawerSetState?.call(() {});
     }
   }
 
@@ -480,6 +485,7 @@ class _RedemptionScreenState extends State<RedemptionScreen>
   Widget _buildHistoryDrawerContent(BuildContext ctx) {
     return StatefulBuilder(
       builder: (ctx, setDrawerState) {
+        _drawerSetState = setDrawerState;
         return Column(
           children: [
             // Header
