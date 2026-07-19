@@ -897,7 +897,7 @@ class _RedemptionScreenState extends State<RedemptionScreen>
 
   Widget _buildSearchBar() {
     return SizedBox(
-      width: 220,
+      width: MediaQuery.of(context).size.width * 0.42,
       child: TextField(
         decoration: InputDecoration(
           hintText: 'Search name or phone...',
