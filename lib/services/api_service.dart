@@ -471,6 +471,48 @@ class ApiService {
     });
   }
 
+  Future<Map<String, dynamic>> getRedemptionHistory({
+    String? status,
+    String? deliveryStatus,
+    String? deliveryMethod,
+    String? search,
+    String? dateFrom,
+    String? dateTo,
+    String? sortBy,
+    String? sortOrder,
+    int skip = 0,
+    int limit = 100,
+  }) async {
+    return _safeNetworkCall(() async {
+      final queryParams = <String, String>{
+        'skip': skip.toString(),
+        'limit': limit.toString(),
+      };
+      if (status != null && status.isNotEmpty) queryParams['status'] = status;
+      if (deliveryStatus != null && deliveryStatus.isNotEmpty) {
+        queryParams['delivery_status'] = deliveryStatus;
+      }
+      if (deliveryMethod != null && deliveryMethod.isNotEmpty) {
+        queryParams['delivery_method'] = deliveryMethod;
+      }
+      if (search != null && search.trim().isNotEmpty) {
+        queryParams['search'] = search.trim();
+      }
+      if (dateFrom != null && dateFrom.isNotEmpty) queryParams['date_from'] = dateFrom;
+      if (dateTo != null && dateTo.isNotEmpty) queryParams['date_to'] = dateTo;
+      if (sortBy != null && sortBy.isNotEmpty) queryParams['sort_by'] = sortBy;
+      if (sortOrder != null && sortOrder.isNotEmpty) queryParams['sort_order'] = sortOrder;
+
+      final uri = Uri.parse(
+              '${AppConstants.baseUrl}${ApiEndpoints.adminRedemptionHistory}')
+          .replace(queryParameters: queryParams);
+      final response = await http
+          .get(uri, headers: _getHeaders())
+          .timeout(Duration(seconds: AppConstants.apiTimeout));
+      return _parseResponse(response) as Map<String, dynamic>;
+    });
+  }
+
   Future<Map<String, dynamic>> approveRedemption(String txId, {String? note}) async {
     return _safeNetworkCall(() async {
       final url = Uri.parse(

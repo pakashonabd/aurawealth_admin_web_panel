@@ -25,6 +25,15 @@ class _RedemptionScreenState extends State<RedemptionScreen>
   final Set<String> _expandedStatusCards = {};
   late TabController _deliveryTabController;
 
+  // History drawer state
+  List<Redemption> _historyRedemptions = [];
+  bool _isLoadingHistory = false;
+  String? _historySearchQuery;
+  String? _historyStatusFilter;
+  String? _historyDeliveryMethodFilter;
+  String _historySortBy = 'created_at';
+  String _historySortOrder = 'desc';
+
   @override
   void initState() {
     super.initState();
@@ -397,6 +406,324 @@ class _RedemptionScreenState extends State<RedemptionScreen>
     );
   }
 
+  // ── History Drawer ──────────────────────────────────────────────────────
+
+  void _openHistoryDrawer() {
+    _loadHistory();
+    showGeneralDialog(
+      context: context,
+      barrierDismissible: true,
+      barrierLabel: 'History',
+      transitionDuration: const Duration(milliseconds: 300),
+      pageBuilder: (_, __, ___) => const SizedBox.shrink(),
+      transitionBuilder: (ctx, anim, secondaryAnim, child) {
+        return SlideTransition(
+          position: Tween<Offset>(
+            begin: const Offset(1, 0),
+            end: Offset.zero,
+          ).animate(CurvedAnimation(parent: anim, curve: Curves.easeOutCubic)),
+          child: Align(
+            alignment: Alignment.centerRight,
+            child: Material(
+              elevation: 16,
+              child: Container(
+                width: MediaQuery.of(ctx).size.width * 0.65,
+                height: double.infinity,
+                color: Colors.white,
+                child: _buildHistoryDrawerContent(ctx),
+              ),
+            ),
+          ),
+        );
+      },
+    );
+  }
+
+  Future<void> _loadHistory() async {
+    if (mounted) setState(() => _isLoadingHistory = true);
+    try {
+      final res = await _api.getRedemptionHistory(
+        status: _historyStatusFilter,
+        deliveryMethod: _historyDeliveryMethodFilter,
+        search: _historySearchQuery,
+        sortBy: _historySortBy,
+        sortOrder: _historySortOrder,
+        limit: 200,
+      );
+      final list = (res['redemptions'] as List<dynamic>? ?? [])
+          .map((j) => Redemption.fromJson(j as Map<String, dynamic>))
+          .toList();
+      if (mounted) setState(() { _historyRedemptions = list; _isLoadingHistory = false; });
+    } catch (e) {
+      if (mounted) setState(() => _isLoadingHistory = false);
+    }
+  }
+
+  Widget _buildHistoryDrawerContent(BuildContext ctx) {
+    return StatefulBuilder(
+      builder: (ctx, setDrawerState) {
+        return Column(
+          children: [
+            // Header
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
+              decoration: BoxDecoration(
+                color: const Color(0xFFD32F2F),
+                boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.1), blurRadius: 4)],
+              ),
+              child: Row(
+                children: [
+                  const Icon(Icons.history_rounded, color: Colors.white, size: 22),
+                  const SizedBox(width: 10),
+                  const Expanded(
+                    child: Text('Redemption History',
+                        style: TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.w600)),
+                  ),
+                  IconButton(
+                    icon: const Icon(Icons.close, color: Colors.white),
+                    onPressed: () => Navigator.of(ctx).pop(),
+                  ),
+                ],
+              ),
+            ),
+            // Filters
+            Container(
+              padding: const EdgeInsets.all(12),
+              color: Colors.grey.shade50,
+              child: Column(
+                children: [
+                  Row(
+                    children: [
+                      Expanded(
+                        child: TextField(
+                          decoration: InputDecoration(
+                            hintText: 'Search user...',
+                            prefixIcon: const Icon(Icons.search, size: 18),
+                            border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
+                            contentPadding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+                            isDense: true,
+                          ),
+                          onSubmitted: (v) {
+                            _historySearchQuery = v.isEmpty ? null : v;
+                            _loadHistory();
+                            setDrawerState(() {});
+                          },
+                        ),
+                      ),
+                      const SizedBox(width: 8),
+                      Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 8),
+                        decoration: BoxDecoration(
+                          border: Border.all(color: Colors.grey.shade300),
+                          borderRadius: BorderRadius.circular(8),
+                        ),
+                        child: DropdownButtonHideUnderline(
+                          child: DropdownButton<String>(
+                            value: _historyStatusFilter,
+                            hint: const Text('Status', style: TextStyle(fontSize: 13)),
+                            isDense: true,
+                            items: const [
+                              DropdownMenuItem(value: null, child: Text('All Status')),
+                              DropdownMenuItem(value: 'pending', child: Text('Pending')),
+                              DropdownMenuItem(value: 'approved', child: Text('Approved')),
+                              DropdownMenuItem(value: 'rejected', child: Text('Rejected')),
+                            ],
+                            onChanged: (v) { _historyStatusFilter = v; _loadHistory(); setDrawerState(() {}); },
+                          ),
+                        ),
+                      ),
+                      const SizedBox(width: 8),
+                      Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 8),
+                        decoration: BoxDecoration(
+                          border: Border.all(color: Colors.grey.shade300),
+                          borderRadius: BorderRadius.circular(8),
+                        ),
+                        child: DropdownButtonHideUnderline(
+                          child: DropdownButton<String>(
+                            value: _historyDeliveryMethodFilter,
+                            hint: const Text('Type', style: TextStyle(fontSize: 13)),
+                            isDense: true,
+                            items: const [
+                              DropdownMenuItem(value: null, child: Text('All Types')),
+                              DropdownMenuItem(value: 'delivery', child: Text('Home Delivery')),
+                              DropdownMenuItem(value: 'store_pickup', child: Text('Store Pickup')),
+                            ],
+                            onChanged: (v) { _historyDeliveryMethodFilter = v; _loadHistory(); setDrawerState(() {}); },
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 8),
+                  Row(
+                    children: [
+                      Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 8),
+                        decoration: BoxDecoration(
+                          border: Border.all(color: Colors.grey.shade300),
+                          borderRadius: BorderRadius.circular(8),
+                        ),
+                        child: DropdownButtonHideUnderline(
+                          child: DropdownButton<String>(
+                            value: _historySortBy,
+                            isDense: true,
+                            items: const [
+                              DropdownMenuItem(value: 'created_at', child: Text('Date')),
+                              DropdownMenuItem(value: 'gold_amount', child: Text('Gold')),
+                              DropdownMenuItem(value: 'total_amount', child: Text('Amount')),
+                            ],
+                            onChanged: (v) { _historySortBy = v ?? 'created_at'; _loadHistory(); setDrawerState(() {}); },
+                          ),
+                        ),
+                      ),
+                      const SizedBox(width: 8),
+                      IconButton(
+                        icon: Icon(
+                          _historySortOrder == 'desc' ? Icons.arrow_downward : Icons.arrow_upward,
+                          size: 18,
+                        ),
+                        onPressed: () {
+                          _historySortOrder = _historySortOrder == 'desc' ? 'asc' : 'desc';
+                          _loadHistory();
+                          setDrawerState(() {});
+                        },
+                        tooltip: 'Toggle sort order',
+                      ),
+                      const Spacer(),
+                      Text('${_historyRedemptions.length} results',
+                          style: TextStyle(fontSize: 12, color: Colors.grey.shade600)),
+                    ],
+                  ),
+                ],
+              ),
+            ),
+            // List
+            Expanded(
+              child: _isLoadingHistory
+                  ? const Center(child: CircularProgressIndicator())
+                  : _historyRedemptions.isEmpty
+                      ? const Center(child: Text('No redemptions found'))
+                      : ListView.builder(
+                          padding: const EdgeInsets.all(12),
+                          itemCount: _historyRedemptions.length,
+                          itemBuilder: (_, i) => _buildHistoryCard(_historyRedemptions[i]),
+                        ),
+            ),
+          ],
+        );
+      },
+    );
+  }
+
+  Widget _buildHistoryCard(Redemption r) {
+    final statusColor = r.approvalStatus == 'approved'
+        ? AppColors.statusApproved
+        : r.approvalStatus == 'rejected'
+            ? AppColors.error
+            : AppColors.statusPending;
+    final deliveryLabel = r.deliveryStatus != null
+        ? r.deliveryStatus!.replaceAll('_', ' ').toUpperCase()
+        : 'N/A';
+
+    return Container(
+      margin: const EdgeInsets.only(bottom: 10),
+      padding: const EdgeInsets.all(14),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: Colors.grey.shade200),
+        boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.03), blurRadius: 4, offset: const Offset(0, 2))],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          // Top row: user + status
+          Row(
+            children: [
+              CircleAvatar(
+                radius: 18,
+                backgroundColor: statusColor.withOpacity(0.1),
+                child: Icon(Icons.person, size: 18, color: statusColor),
+              ),
+              const SizedBox(width: 10),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(r.userName ?? 'Unknown', style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 13)),
+                    Text(r.userPhone ?? '', style: TextStyle(fontSize: 11, color: Colors.grey.shade600)),
+                  ],
+                ),
+              ),
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                decoration: BoxDecoration(color: statusColor.withOpacity(0.1), borderRadius: BorderRadius.circular(12)),
+                child: Text(r.approvalStatus.toUpperCase(), style: TextStyle(fontSize: 10, fontWeight: FontWeight.w600, color: statusColor)),
+              ),
+            ],
+          ),
+          const Divider(height: 16),
+          // Details grid
+          Wrap(
+            spacing: 16,
+            runSpacing: 8,
+            children: [
+              _historyDetail('Type', r.deliveryMethod == 'delivery' ? 'Home Delivery' : 'Store Pickup'),
+              _historyDetail('Gold', '${r.goldAmount.toStringAsFixed(2)}g'),
+              _historyDetail('Fee', '৳${r.feeAmount.toStringAsFixed(0)}'),
+              _historyDetail('VAT', '৳${r.vatAmount.toStringAsFixed(0)}'),
+              _historyDetail('Total', '৳${r.totalAmount.toStringAsFixed(0)}'),
+              _historyDetail('Delivery', deliveryLabel),
+            ],
+          ),
+          if (r.adminNote != null && r.adminNote!.isNotEmpty) ...[
+            const SizedBox(height: 8),
+            Container(
+              padding: const EdgeInsets.all(8),
+              decoration: BoxDecoration(color: Colors.grey.shade100, borderRadius: BorderRadius.circular(8)),
+              child: Row(
+                children: [
+                  Icon(Icons.note, size: 14, color: Colors.grey.shade600),
+                  const SizedBox(width: 6),
+                  Expanded(child: Text(r.adminNote!, style: TextStyle(fontSize: 11, color: Colors.grey.shade700))),
+                ],
+              ),
+            ),
+          ],
+          if (r.redemptionAddress != null && r.redemptionAddress!.isNotEmpty) ...[
+            const SizedBox(height: 6),
+            Row(
+              children: [
+                Icon(Icons.location_on_outlined, size: 14, color: Colors.grey.shade500),
+                const SizedBox(width: 4),
+                Expanded(child: Text(r.redemptionAddress!, style: TextStyle(fontSize: 11, color: Colors.grey.shade600))),
+              ],
+            ),
+          ],
+          const SizedBox(height: 6),
+          Row(
+            children: [
+              Icon(Icons.access_time, size: 12, color: Colors.grey.shade400),
+              const SizedBox(width: 4),
+              Text(r.createdAt, style: TextStyle(fontSize: 10, color: Colors.grey.shade500)),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _historyDetail(String label, String value) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(label, style: TextStyle(fontSize: 10, color: Colors.grey.shade500)),
+        Text(value, style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w500)),
+      ],
+    );
+  }
+
   Widget _buildHeader() {
     final pending = _pendingRedemptions.length;
     final totalGold = _redemptions.fold(0.0, (s, r) => s + r.goldAmount);
@@ -416,6 +743,18 @@ class _RedemptionScreenState extends State<RedemptionScreen>
         _statChip('Gold', '${totalGold.toStringAsFixed(1)}g', Colors.amber),
         const Spacer(),
         _buildSearchBar(),
+        const SizedBox(width: 12),
+        ElevatedButton.icon(
+          onPressed: _openHistoryDrawer,
+          icon: const Icon(Icons.history_rounded, size: 18),
+          label: const Text('History'),
+          style: ElevatedButton.styleFrom(
+            backgroundColor: const Color(0xFFD32F2F),
+            foregroundColor: Colors.white,
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+          ),
+        ),
       ],
     );
   }

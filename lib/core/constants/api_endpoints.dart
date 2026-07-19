@@ -18,6 +18,7 @@ class ApiEndpoints {
 
   // Redemption Management
   static const String adminRedemptions = '/admin/redeem-coin';
+  static const String adminRedemptionHistory = '/admin/redeem-coin/history';
   static String adminApproveRedemption(String txId) => '/admin/redeem-coin/$txId/approve';
   static String adminRejectRedemption(String txId) => '/admin/redeem-coin/$txId/reject';
   static String adminUpdateDeliveryStatus(String txId) => '/admin/redeem-coin/$txId/delivery-status';
