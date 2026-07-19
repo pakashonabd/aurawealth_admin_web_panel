@@ -898,31 +898,24 @@ class _UsersScreenState extends State<UsersScreen> {
                   ),
                   const SizedBox(height: 10),
 
-                  // Info groups inside a light box
-                  Container(
-                    padding: const EdgeInsets.all(10),
-                    decoration: BoxDecoration(
-                      color: AppColors.grey50,
-                      borderRadius: BorderRadius.circular(12),
-                      border: Border.all(color: AppColors.grey100),
-                    ),
-                    child: Column(
+                  // Info groups — compact grid layout
+                  Column(
                       children: [
-                        // Contact & Security row
+                        // Contact row
                         _infoGroupRow(
                           children: [
                             _infoItem(Icons.phone_outlined, 'Phone', user.phoneNumber ?? '—'),
                             _infoItem(Icons.badge_outlined, 'NID', user.nationalId ?? '—'),
                           ],
                         ),
-                        const SizedBox(height: 8),
+                        const SizedBox(height: 6),
                         _infoGroupRow(
                           children: [
                             _infoItem(Icons.account_balance_outlined, 'Bank', user.bankName ?? '—'),
                             _infoItem(Icons.credit_card_outlined, 'Account', user.accountNumber ?? '—'),
                           ],
                         ),
-                        const SizedBox(height: 8),
+                        const SizedBox(height: 6),
                         _infoGroupRow(
                           children: [
                             _infoItem(Icons.savings_outlined, 'Wallet', Formatters.formatGrams(user.totalGrams ?? 0)),
@@ -930,7 +923,7 @@ class _UsersScreenState extends State<UsersScreen> {
                             _infoItem(Icons.account_balance_wallet_outlined, 'Available', Formatters.formatGrams(user.availableGrams ?? 0)),
                           ],
                         ),
-                        const SizedBox(height: 8),
+                        const SizedBox(height: 6),
                         _infoGroupRow(
                           children: [
                             _infoItem(Icons.receipt_long_outlined, 'Transactions', '${userTxs.length} • ${Formatters.formatGrams(txGrams)}'),
@@ -938,7 +931,7 @@ class _UsersScreenState extends State<UsersScreen> {
                           ],
                         ),
                         // Security flags row
-                        const SizedBox(height: 8),
+                        const SizedBox(height: 6),
                         Row(
                           children: [
                             _securityBadge(Icons.fingerprint, 'Fingerprint', user.hasFingerprint),
@@ -952,9 +945,8 @@ class _UsersScreenState extends State<UsersScreen> {
                             ],
                           ],
                         ),
-                      ],
+                       ],
                     ),
-                  ),
 
                   if (!compact) ...[
                     const SizedBox(height: 8),
@@ -1008,29 +1000,46 @@ class _UsersScreenState extends State<UsersScreen> {
   }
 
   Widget _infoItem(IconData icon, String label, String value) {
-    return Row(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Icon(icon, size: 12, color: AppColors.primary),
-        const SizedBox(width: 4),
-        Expanded(
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                label,
-                style: TextStyle(fontSize: 9, color: AppColors.grey500, fontWeight: FontWeight.w500),
-              ),
-              Text(
-                value,
-                style: TextStyle(fontSize: 11, color: AppColors.textPrimary, fontWeight: FontWeight.w600),
-                overflow: TextOverflow.ellipsis,
-                maxLines: 1,
-              ),
-            ],
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
+      decoration: BoxDecoration(
+        color: AppColors.grey50,
+        borderRadius: BorderRadius.circular(8),
+        border: Border.all(color: AppColors.grey100),
+      ),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.center,
+        children: [
+          Container(
+            padding: const EdgeInsets.all(4),
+            decoration: BoxDecoration(
+              color: AppColors.primary.withOpacity(0.06),
+              borderRadius: BorderRadius.circular(6),
+            ),
+            child: Icon(icon, size: 11, color: AppColors.primary),
           ),
-        ),
-      ],
+          const SizedBox(width: 6),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Text(
+                  label,
+                  style: TextStyle(fontSize: 8.5, color: AppColors.grey500, fontWeight: FontWeight.w500),
+                ),
+                const SizedBox(height: 1),
+                Text(
+                  value,
+                  style: TextStyle(fontSize: 10.5, color: AppColors.textPrimary, fontWeight: FontWeight.w600),
+                  overflow: TextOverflow.ellipsis,
+                  maxLines: 1,
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
     );
   }
 

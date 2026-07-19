@@ -497,15 +497,33 @@ class ApiService {
   }
 
   Future<Map<String, dynamic>> updateDeliveryStatus(String txId, String deliveryStatus) async {
-    return _safeNetworkCall(() async {
-      final url = Uri.parse(
-          '${AppConstants.baseUrl}${ApiEndpoints.adminUpdateDeliveryStatus(txId)}');
-      final body = json.encode({'delivery_status': deliveryStatus});
-      final response = await http
-          .put(url, headers: _getHeaders(), body: body)
-          .timeout(Duration(seconds: AppConstants.apiTimeout));
-      return _parseResponse(response) as Map<String, dynamic>;
-    });
+    // Retry up to 2 times on network errors (Heroku cold-start / transient)
+    for (int attempt = 0; attempt < 2; attempt++) {
+      try {
+        return await _safeNetworkCall(() async {
+          final url = Uri.parse(
+              '${AppConstants.baseUrl}${ApiEndpoints.adminUpdateDeliveryStatus(txId)}');
+          final body = json.encode({'delivery_status': deliveryStatus});
+          final response = await http
+              .put(url, headers: _getHeaders(), body: body)
+              .timeout(Duration(seconds: AppConstants.apiTimeout));
+          return _parseResponse(response) as Map<String, dynamic>;
+        });
+      } on Exception catch (e) {
+        final msg = e.toString();
+        final isNetworkError = msg.contains('Unable to reach') ||
+            msg.contains('Failed to fetch') ||
+            msg.contains('ClientException') ||
+            msg.contains('timed out');
+        if (isNetworkError && attempt == 0) {
+          // Wait briefly then retry once for transient network errors
+          await Future.delayed(const Duration(seconds: 2));
+          continue;
+        }
+        rethrow;
+      }
+    }
+    throw Exception('Unable to reach the server. Please try again.');
   }
 
 }

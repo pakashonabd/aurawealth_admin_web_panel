@@ -243,8 +243,18 @@ class _RedemptionScreenState extends State<RedemptionScreen>
           backgroundColor: AppColors.success, colorText: Colors.white);
       _loadRedemptions(silent: true);
     } catch (e) {
-      Get.snackbar('Error', e.toString(),
-          backgroundColor: AppColors.error, colorText: Colors.white);
+      final msg = e.toString();
+      String friendly;
+      if (msg.contains('Unable to reach') || msg.contains('Failed to fetch') || msg.contains('ClientException')) {
+        friendly = 'Unable to connect to the server. Please check your internet connection and try again.';
+      } else if (msg.contains('timed out')) {
+        friendly = 'Request timed out. The server may be starting up — please try again in a moment.';
+      } else {
+        friendly = msg.replaceFirst('Exception: ', '');
+      }
+      Get.snackbar('Update Failed', friendly,
+          backgroundColor: AppColors.error, colorText: Colors.white,
+          duration: const Duration(seconds: 4));
     }
   }
 

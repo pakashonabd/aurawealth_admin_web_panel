@@ -72,13 +72,25 @@ class Transaction {
 
     // Compute fee amount: gross - net  OR  price * grams * rate
     double feeAmount = _d(json['fee_amount']);
-    if (feeAmount == 0.0 && pricePerGram > 0 && grams > 0 && deductionRate > 0) {
-      feeAmount = pricePerGram * grams * deductionRate;
-    }
-    if (feeAmount == 0.0 && amountBdt > 0 && pricePerGram > 0 && grams > 0) {
-      // gross = price * grams, fee = gross - net
-      final gross = pricePerGram * grams;
-      if (gross > amountBdt) feeAmount = gross - amountBdt;
+
+    // REDEEM_COIN special handling:
+    // Backend stores total_fee (e.g. 1260) in amount_bdt, NOT the gold value.
+    // Gold value = grams * pricePerGram. Fee = amount_bdt.
+    double computedAmountBdt = amountBdt;
+    if (rawType == 'REDEEM_COIN' && grams > 0 && pricePerGram > 0) {
+      computedAmountBdt = grams * pricePerGram;
+      if (feeAmount == 0.0) {
+        feeAmount = amountBdt; // amount_bdt holds the total fee for REDEEM_COIN
+      }
+    } else {
+      if (feeAmount == 0.0 && pricePerGram > 0 && grams > 0 && deductionRate > 0) {
+        feeAmount = pricePerGram * grams * deductionRate;
+      }
+      if (feeAmount == 0.0 && amountBdt > 0 && pricePerGram > 0 && grams > 0) {
+        // gross = price * grams, fee = gross - net
+        final gross = pricePerGram * grams;
+        if (gross > amountBdt) feeAmount = gross - amountBdt;
+      }
     }
 
     // Extract user information with debug logging
@@ -109,7 +121,7 @@ class Transaction {
       status:       rawStatus,
       grams:        grams,
       pricePerGram: pricePerGram,
-      amountBdt:    amountBdt,
+      amountBdt:    computedAmountBdt,
       feePercent:   feePercent,
       feeAmount:    feeAmount,
       code:         json['code']?.toString(),
