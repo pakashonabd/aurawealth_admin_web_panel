@@ -1027,64 +1027,129 @@ class _RedemptionScreenState extends State<RedemptionScreen>
   }
 
   Widget _buildDeliveryTabs() {
-    return Container(
-      decoration: BoxDecoration(
-        color: Colors.transparent,
-        borderRadius: BorderRadius.circular(10),
-        border: Border.all(color: AppColors.grey200),
-      ),
-      child: TabBar(
-        controller: _deliveryTabController,
-        indicator: BoxDecoration(
-          color: AppColors.grey100,
-          borderRadius: BorderRadius.circular(10),
+    final isHome = _deliveryTabController.index == 0;
+    return GestureDetector(
+      onTap: () {
+        final newIndex = isHome ? 1 : 0;
+        _deliveryTabController.animateTo(newIndex);
+        setState(() {});
+      },
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 300),
+        curve: Curves.easeInOutCubic,
+        height: 44,
+        decoration: BoxDecoration(
+          color: const Color(0xFFE8E8E8),
+          borderRadius: BorderRadius.circular(22),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withValues(alpha: 0.15),
+              blurRadius: 6,
+              offset: const Offset(0, 2),
+            ),
+            BoxShadow(
+              color: Colors.white.withValues(alpha: 0.8),
+              blurRadius: 2,
+              offset: const Offset(0, -1),
+            ),
+          ],
         ),
-        labelColor: Colors.black,
-        unselectedLabelColor: AppColors.grey600,
-        labelStyle: const TextStyle(fontSize: 12, fontWeight: FontWeight.w600),
-        unselectedLabelStyle: const TextStyle(fontSize: 12),
-        tabs: [
-          Tab(child: Row(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              const Icon(Icons.local_shipping_rounded, size: 14),
-              const SizedBox(width: 4),
-              const Text('Home Delivery'),
-              if (_homeDeliveryCount > 0) ...[
-                const SizedBox(width: 4),
-                Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 1),
-                  decoration: BoxDecoration(
-                    color: AppColors.statusPending,
-                    borderRadius: BorderRadius.circular(8),
+        padding: const EdgeInsets.all(3),
+        child: Stack(
+          children: [
+            AnimatedAlign(
+              duration: const Duration(milliseconds: 300),
+              curve: Curves.easeInOutCubic,
+              alignment: isHome ? Alignment.centerLeft : Alignment.centerRight,
+              child: Container(
+                width: (MediaQuery.of(context).size.width * 0.30 - 50) / 2 + 40,
+                height: 38,
+                decoration: BoxDecoration(
+                  gradient: LinearGradient(
+                    colors: isHome
+                        ? [const Color(0xFFE67E22), const Color(0xFFF39C12)]
+                        : [const Color(0xFF7B1FA2), const Color(0xFF9C27B0)],
+                    begin: Alignment.topLeft,
+                    end: Alignment.bottomRight,
                   ),
-                  child: Text('$_homeDeliveryCount',
-                      style: const TextStyle(fontSize: 10, color: Colors.white)),
+                  borderRadius: BorderRadius.circular(19),
+                  boxShadow: [
+                    BoxShadow(
+                      color: (isHome ? const Color(0xFFE67E22) : const Color(0xFF7B1FA2))
+                          .withValues(alpha: 0.4),
+                      blurRadius: 8,
+                      offset: const Offset(0, 3),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+            Row(
+              children: [
+                Expanded(
+                  child: Center(
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Icon(Icons.local_shipping_rounded, size: 14,
+                            color: isHome ? Colors.white : AppColors.grey500),
+                        const SizedBox(width: 4),
+                        Text('Home Delivery',
+                            style: TextStyle(
+                              fontSize: 12,
+                              fontWeight: FontWeight.w600,
+                              color: isHome ? Colors.white : AppColors.grey500,
+                            )),
+                        if (_homeDeliveryCount > 0) ...[
+                          const SizedBox(width: 4),
+                          Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 1),
+                            decoration: BoxDecoration(
+                              color: isHome ? Colors.white.withValues(alpha: 0.3) : AppColors.statusPending,
+                              borderRadius: BorderRadius.circular(8),
+                            ),
+                            child: Text('$_homeDeliveryCount',
+                                style: TextStyle(fontSize: 10, color: isHome ? Colors.white : Colors.white)),
+                          ),
+                        ],
+                      ],
+                    ),
+                  ),
+                ),
+                Expanded(
+                  child: Center(
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Icon(Icons.store_rounded, size: 14,
+                            color: !isHome ? Colors.white : AppColors.grey500),
+                        const SizedBox(width: 4),
+                        Text('Store Pickup',
+                            style: TextStyle(
+                              fontSize: 12,
+                              fontWeight: FontWeight.w600,
+                              color: !isHome ? Colors.white : AppColors.grey500,
+                            )),
+                        if (_storePickupCount > 0) ...[
+                          const SizedBox(width: 4),
+                          Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 1),
+                            decoration: BoxDecoration(
+                              color: !isHome ? Colors.white.withValues(alpha: 0.3) : const Color(0xFF673AB7),
+                              borderRadius: BorderRadius.circular(8),
+                            ),
+                            child: Text('$_storePickupCount',
+                                style: TextStyle(fontSize: 10, color: !isHome ? Colors.white : Colors.white)),
+                          ),
+                        ],
+                      ],
+                    ),
+                  ),
                 ),
               ],
-            ],
-          )),
-          Tab(child: Row(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              const Icon(Icons.store_rounded, size: 14),
-              const SizedBox(width: 4),
-              const Text('Store Pickup'),
-              if (_storePickupCount > 0) ...[
-                const SizedBox(width: 4),
-                Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 1),
-                  decoration: BoxDecoration(
-                    color: const Color(0xFF673AB7),
-                    borderRadius: BorderRadius.circular(8),
-                  ),
-                  child: Text('$_storePickupCount',
-                      style: const TextStyle(fontSize: 10, color: Colors.white)),
-                ),
-              ],
-            ],
-          )),
-        ],
+            ),
+          ],
+        ),
       ),
     );
   }
