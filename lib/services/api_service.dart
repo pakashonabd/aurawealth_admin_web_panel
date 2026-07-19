@@ -497,33 +497,57 @@ class ApiService {
   }
 
   Future<Map<String, dynamic>> updateDeliveryStatus(String txId, String deliveryStatus) async {
-    // Retry up to 2 times on network errors (Heroku cold-start / transient)
+    final url = Uri.parse(
+        '${AppConstants.baseUrl}${ApiEndpoints.adminUpdateDeliveryStatus(txId)}');
+    final body = json.encode({'delivery_status': deliveryStatus});
+
     for (int attempt = 0; attempt < 2; attempt++) {
+      http.Response response;
       try {
-        return await _safeNetworkCall(() async {
-          final url = Uri.parse(
-              '${AppConstants.baseUrl}${ApiEndpoints.adminUpdateDeliveryStatus(txId)}');
-          final body = json.encode({'delivery_status': deliveryStatus});
-          final response = await http
-              .put(url, headers: _getHeaders(), body: body)
-              .timeout(Duration(seconds: AppConstants.apiTimeout));
-          return _parseResponse(response) as Map<String, dynamic>;
-        });
-      } on Exception catch (e) {
+        response = await http
+            .put(url, headers: _getHeaders(), body: body)
+            .timeout(Duration(seconds: AppConstants.apiTimeout));
+      } catch (e) {
         final msg = e.toString();
-        final isNetworkError = msg.contains('Unable to reach') ||
-            msg.contains('Failed to fetch') ||
+        final isTimeout = msg.contains('timed out') || msg.contains('Timeout');
+        final isNetwork = msg.contains('Failed to fetch') ||
             msg.contains('ClientException') ||
-            msg.contains('timed out');
-        if (isNetworkError && attempt == 0) {
-          // Wait briefly then retry once for transient network errors
+            msg.contains('SocketException');
+        if ((isTimeout || isNetwork) && attempt == 0) {
           await Future.delayed(const Duration(seconds: 2));
           continue;
         }
-        rethrow;
+        if (isTimeout) {
+          throw Exception('Server is cold-starting. Please wait a moment and try again.');
+        }
+        throw Exception('Network error. Please check your internet connection.');
       }
+
+      if (response.statusCode >= 200 && response.statusCode < 300) {
+        try {
+          return json.decode(response.body) as Map<String, dynamic>;
+        } catch (_) {
+          return {'status': 'ok'};
+        }
+      }
+
+      String errorMsg;
+      try {
+        final decoded = json.decode(response.body);
+        if (decoded is Map<String, dynamic>) {
+          errorMsg = decoded['detail']?.toString() ??
+              decoded['message']?.toString() ??
+              decoded['error']?.toString() ??
+              'Server returned ${response.statusCode}';
+        } else {
+          errorMsg = 'Server returned ${response.statusCode}';
+        }
+      } catch (_) {
+        errorMsg = 'Server returned ${response.statusCode}';
+      }
+      throw Exception(errorMsg);
     }
-    throw Exception('Unable to reach the server. Please try again.');
+    throw Exception('Server did not respond. Please try again.');
   }
 
 }

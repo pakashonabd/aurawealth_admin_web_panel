@@ -22,6 +22,7 @@ class _RedemptionScreenState extends State<RedemptionScreen>
   String? _searchQuery;
   Timer? _pollTimer;
 
+  final Set<String> _expandedStatusCards = {};
   late TabController _deliveryTabController;
 
   @override
@@ -243,106 +244,130 @@ class _RedemptionScreenState extends State<RedemptionScreen>
           backgroundColor: AppColors.success, colorText: Colors.white);
       _loadRedemptions(silent: true);
     } catch (e) {
-      final msg = e.toString();
-      String friendly;
-      if (msg.contains('Unable to reach') || msg.contains('Failed to fetch') || msg.contains('ClientException')) {
-        friendly = 'Unable to connect to the server. Please check your internet connection and try again.';
-      } else if (msg.contains('timed out')) {
-        friendly = 'Request timed out. The server may be starting up — please try again in a moment.';
-      } else {
-        friendly = msg.replaceFirst('Exception: ', '');
-      }
-      Get.snackbar('Update Failed', friendly,
+      final raw = e.toString().replaceFirst('Exception: ', '');
+      Get.snackbar('Update Failed', raw,
           backgroundColor: AppColors.error, colorText: Colors.white,
-          duration: const Duration(seconds: 4));
+          duration: const Duration(seconds: 5));
     }
   }
 
-  void _showUpdateStatusDialog(Redemption r) {
+  void _toggleStatusPicker(String txId) {
+    setState(() {
+      if (_expandedStatusCards.contains(txId)) {
+        _expandedStatusCards.remove(txId);
+      } else {
+        _expandedStatusCards.add(txId);
+      }
+    });
+  }
+
+  Widget _buildInlineStatusPicker(Redemption r) {
     final allStatuses = _allStatusesForDeliveryType(r.deliveryMethod);
     final currentIdx = _statusIndex(r.deliveryStatus ?? 'PENDING', r.deliveryMethod);
 
-    showDialog(
-      context: context,
-      builder: (ctx) => AlertDialog(
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-        title: const Text('Update Status'),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: allStatuses.map((s) {
-            final sIdx = allStatuses.indexOf(s);
-            final isDone = sIdx < currentIdx;
-            final isCurrent = sIdx == currentIdx;
-            final isFuture = sIdx > currentIdx;
-            final color = _deliveryStatusColor(s);
+    return Container(
+      margin: const EdgeInsets.only(top: 8),
+      padding: const EdgeInsets.all(8),
+      decoration: BoxDecoration(
+        color: AppColors.grey50,
+        borderRadius: BorderRadius.circular(10),
+        border: Border.all(color: AppColors.grey200),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Icon(Icons.flag_rounded, size: 13, color: AppColors.info),
+              const SizedBox(width: 4),
+              Text('Update Delivery Status',
+                  style: TextStyle(fontSize: 11, fontWeight: FontWeight.w600, color: AppColors.textPrimary)),
+              const Spacer(),
+              InkWell(
+                onTap: () => _toggleStatusPicker(r.txId),
+                child: Icon(Icons.close_rounded, size: 16, color: AppColors.grey500),
+              ),
+            ],
+          ),
+          const SizedBox(height: 6),
+          Wrap(
+            spacing: 6,
+            runSpacing: 6,
+            children: allStatuses.map((s) {
+              final sIdx = allStatuses.indexOf(s);
+              final isDone = sIdx < currentIdx;
+              final isCurrent = sIdx == currentIdx;
+              final isFuture = sIdx > currentIdx;
+              final color = _deliveryStatusColor(s);
 
-            return ListTile(
-              contentPadding: EdgeInsets.zero,
-              enabled: isFuture,
-              leading: Container(
-                padding: const EdgeInsets.all(8),
-                decoration: BoxDecoration(
-                  color: isDone
-                      ? AppColors.success.withOpacity(0.1)
-                      : isCurrent
-                          ? color.withOpacity(0.1)
-                          : AppColors.grey100,
-                  borderRadius: BorderRadius.circular(10),
+              return InkWell(
+                onTap: isFuture
+                    ? () {
+                        _toggleStatusPicker(r.txId);
+                        _updateDelivery(r.txId, s);
+                      }
+                    : null,
+                borderRadius: BorderRadius.circular(8),
+                child: Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                  decoration: BoxDecoration(
+                    color: isDone
+                        ? AppColors.success.withOpacity(0.08)
+                        : isCurrent
+                            ? color.withOpacity(0.12)
+                            : isFuture
+                                ? color.withOpacity(0.05)
+                                : AppColors.grey100,
+                    borderRadius: BorderRadius.circular(8),
+                    border: Border.all(
+                      color: isCurrent
+                          ? color.withOpacity(0.4)
+                          : isFuture
+                              ? color.withOpacity(0.15)
+                              : AppColors.grey200,
+                      width: isCurrent ? 1.5 : 1,
+                    ),
+                  ),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Icon(
+                        isDone
+                            ? Icons.check_circle_rounded
+                            : isCurrent
+                                ? Icons.radio_button_checked
+                                : Icons.circle_outlined,
+                        size: 14,
+                        color: isDone
+                            ? AppColors.success
+                            : isCurrent
+                                ? color
+                                : AppColors.grey400,
+                      ),
+                      const SizedBox(width: 5),
+                      Text(
+                        _deliveryStatusLabel(s),
+                        style: TextStyle(
+                          fontSize: 11,
+                          fontWeight: isCurrent ? FontWeight.w600 : FontWeight.w500,
+                          color: isDone
+                              ? AppColors.success
+                              : isCurrent
+                                  ? color
+                                  : isFuture
+                                      ? AppColors.textPrimary
+                                      : AppColors.grey400,
+                        ),
+                      ),
+                      if (isDone) ...[
+                        const SizedBox(width: 3),
+                        Icon(Icons.check_rounded, size: 12, color: AppColors.success),
+                      ],
+                    ],
+                  ),
                 ),
-                child: Icon(
-                  isDone
-                      ? Icons.check_circle_rounded
-                      : isCurrent
-                          ? Icons.radio_button_checked
-                          : Icons.circle_outlined,
-                  color: isDone
-                      ? AppColors.success
-                      : isCurrent
-                          ? color
-                          : AppColors.grey400,
-                  size: 20,
-                ),
-              ),
-              title: Text(
-                _deliveryStatusLabel(s),
-                style: TextStyle(
-                  fontSize: 14,
-                  fontWeight: isCurrent ? FontWeight.w600 : FontWeight.w400,
-                  color: isFuture
-                      ? AppColors.textPrimary
-                      : isDone
-                          ? AppColors.success
-                          : AppColors.grey500,
-                ),
-              ),
-              subtitle: Text(
-                isDone
-                    ? 'Completed'
-                    : isCurrent
-                        ? 'Current'
-                        : 'Set to "${_deliveryStatusLabel(s)}"',
-                style: TextStyle(
-                  fontSize: 11,
-                  color: isDone
-                      ? AppColors.success
-                      : isCurrent
-                          ? color
-                          : AppColors.grey500,
-                ),
-              ),
-              onTap: isFuture
-                  ? () {
-                      Navigator.pop(ctx);
-                      _updateDelivery(r.txId, s);
-                    }
-                  : null,
-            );
-          }).toList(),
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(ctx),
-            child: const Text('Cancel'),
+              );
+            }).toList(),
           ),
         ],
       ),
@@ -790,9 +815,9 @@ class _RedemptionScreenState extends State<RedemptionScreen>
                 const Spacer(),
                 if (!isComplete)
                   _actionBtn(
-                    'Update Status',
+                    _expandedStatusCards.contains(r.txId) ? 'Close' : 'Update Status',
                     AppColors.info,
-                    () => _showUpdateStatusDialog(r),
+                    () => _toggleStatusPicker(r.txId),
                   )
                 else
                   Container(
@@ -816,6 +841,10 @@ class _RedemptionScreenState extends State<RedemptionScreen>
                   ),
               ],
             ),
+
+            // Inline status picker (expanded)
+            if (_expandedStatusCards.contains(r.txId))
+              _buildInlineStatusPicker(r),
           ],
         ),
       ),

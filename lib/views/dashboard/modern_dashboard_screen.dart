@@ -1,9 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:fl_chart/fl_chart.dart';
-import 'package:lottie/lottie.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 import '../../controllers/dashboard_controller.dart';
+import '../../core/constants/app_colors.dart';
 import '../../core/utils/formatters.dart';
 import '../../models/transaction.dart';
 import '../../widgets/common/loading_widget.dart';
@@ -160,12 +160,24 @@ class ModernDashboardScreen extends StatelessWidget {
                       ),
                       const SizedBox(height: 12),
                       Center(
-                        child: SizedBox(
+                        child: Container(
                           width: 120,
                           height: 120,
-                          child: Lottie.asset(
-                            'assets/lottie/Admin Panel.json',
-                            fit: BoxFit.contain,
+                          decoration: BoxDecoration(
+                            gradient: LinearGradient(
+                              colors: [
+                                AppColors.primary.withOpacity(0.1),
+                                AppColors.primary.withOpacity(0.25),
+                              ],
+                              begin: Alignment.topLeft,
+                              end: Alignment.bottomRight,
+                            ),
+                            borderRadius: BorderRadius.circular(24),
+                          ),
+                          child: Icon(
+                            Icons.admin_panel_settings_rounded,
+                            size: 56,
+                            color: AppColors.primary,
                           ),
                         ),
                       ),
@@ -206,12 +218,24 @@ class ModernDashboardScreen extends StatelessWidget {
                           ],
                         ),
                       ),
-                      SizedBox(
+                      Container(
                         width: 150,
                         height: 160,
-                        child: Lottie.asset(
-                          'assets/lottie/Admin Panel.json',
-                          fit: BoxFit.fitHeight,
+                        decoration: BoxDecoration(
+                          gradient: LinearGradient(
+                            colors: [
+                              AppColors.primary.withOpacity(0.1),
+                              AppColors.primary.withOpacity(0.25),
+                            ],
+                            begin: Alignment.topLeft,
+                            end: Alignment.bottomRight,
+                          ),
+                          borderRadius: BorderRadius.circular(24),
+                        ),
+                        child: Icon(
+                          Icons.admin_panel_settings_rounded,
+                          size: 72,
+                          color: AppColors.primary,
                         ),
                       ),
                     ],
