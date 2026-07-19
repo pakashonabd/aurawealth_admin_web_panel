@@ -1065,20 +1065,13 @@ class _RedemptionScreenState extends State<RedemptionScreen>
                 width: (MediaQuery.of(context).size.width * 0.30 - 50) / 2 + 40,
                 height: 38,
                 decoration: BoxDecoration(
-                  gradient: LinearGradient(
-                    colors: isHome
-                        ? [const Color(0xFFE67E22), const Color(0xFFF39C12)]
-                        : [const Color(0xFF7B1FA2), const Color(0xFF9C27B0)],
-                    begin: Alignment.topLeft,
-                    end: Alignment.bottomRight,
-                  ),
+                  color: Colors.white,
                   borderRadius: BorderRadius.circular(19),
                   boxShadow: [
                     BoxShadow(
-                      color: (isHome ? const Color(0xFFE67E22) : const Color(0xFF7B1FA2))
-                          .withValues(alpha: 0.4),
-                      blurRadius: 8,
-                      offset: const Offset(0, 3),
+                      color: Colors.black.withValues(alpha: 0.15),
+                      blurRadius: 6,
+                      offset: const Offset(0, 2),
                     ),
                   ],
                 ),
@@ -1092,24 +1085,24 @@ class _RedemptionScreenState extends State<RedemptionScreen>
                       mainAxisSize: MainAxisSize.min,
                       children: [
                         Icon(Icons.local_shipping_rounded, size: 14,
-                            color: isHome ? Colors.white : AppColors.grey500),
+                            color: isHome ? Colors.black87 : AppColors.grey500),
                         const SizedBox(width: 4),
                         Text('Home Delivery',
                             style: TextStyle(
                               fontSize: 12,
                               fontWeight: FontWeight.w600,
-                              color: isHome ? Colors.white : AppColors.grey500,
+                              color: isHome ? Colors.black87 : AppColors.grey500,
                             )),
                         if (_homeDeliveryCount > 0) ...[
                           const SizedBox(width: 4),
                           Container(
                             padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 1),
                             decoration: BoxDecoration(
-                              color: isHome ? Colors.white.withValues(alpha: 0.3) : AppColors.statusPending,
+                              color: AppColors.statusPending,
                               borderRadius: BorderRadius.circular(8),
                             ),
                             child: Text('$_homeDeliveryCount',
-                                style: TextStyle(fontSize: 10, color: isHome ? Colors.white : Colors.white)),
+                                style: TextStyle(fontSize: 10, color: Colors.white)),
                           ),
                         ],
                       ],
@@ -1122,24 +1115,24 @@ class _RedemptionScreenState extends State<RedemptionScreen>
                       mainAxisSize: MainAxisSize.min,
                       children: [
                         Icon(Icons.store_rounded, size: 14,
-                            color: !isHome ? Colors.white : AppColors.grey500),
+                            color: !isHome ? Colors.black87 : AppColors.grey500),
                         const SizedBox(width: 4),
                         Text('Store Pickup',
                             style: TextStyle(
                               fontSize: 12,
                               fontWeight: FontWeight.w600,
-                              color: !isHome ? Colors.white : AppColors.grey500,
+                              color: !isHome ? Colors.black87 : AppColors.grey500,
                             )),
                         if (_storePickupCount > 0) ...[
                           const SizedBox(width: 4),
                           Container(
                             padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 1),
                             decoration: BoxDecoration(
-                              color: !isHome ? Colors.white.withValues(alpha: 0.3) : const Color(0xFF673AB7),
+                              color: AppColors.statusPending,
                               borderRadius: BorderRadius.circular(8),
                             ),
                             child: Text('$_storePickupCount',
-                                style: TextStyle(fontSize: 10, color: !isHome ? Colors.white : Colors.white)),
+                                style: TextStyle(fontSize: 10, color: Colors.white)),
                           ),
                         ],
                       ],
